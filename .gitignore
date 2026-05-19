@@ -1,0 +1,13 @@
+# Sistema
+Thumbs.db
+Desktop.ini
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Dependencias futuras
+node_modules/
