@@ -281,12 +281,14 @@
       .app {
         position: relative;
         min-height: calc(100% - 40px);
-        padding: 8px 18px 120px;
+        padding: 10px 18px 156px;
       }
 
       .screen {
         display: none;
         animation: screen-in 240ms ease;
+        width: 100%;
+        min-width: 0;
       }
 
       .screen.is-active {
@@ -306,14 +308,18 @@
       }
 
       .topbar {
-        display: flex;
-        justify-content: space-between;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
         align-items: flex-start;
         gap: 12px;
       }
 
       .topbar--center {
         align-items: center;
+      }
+
+      .topbar__title {
+        min-width: 0;
       }
 
       .topbar__title h1,
@@ -324,10 +330,11 @@
 
       .topbar__title h1,
       .topbar__title h2 {
-        font-size: 2rem;
+        font-size: clamp(1.52rem, 4vw, 2rem);
         line-height: 1.08;
         font-weight: 800;
         letter-spacing: -0.03em;
+        overflow-wrap: anywhere;
       }
 
       .topbar__title p {
@@ -340,6 +347,7 @@
         display: flex;
         gap: 10px;
         align-items: center;
+        flex-shrink: 0;
       }
 
       .icon-button {
@@ -437,6 +445,11 @@
         align-items: flex-start;
         gap: 10px;
         margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+
+      .card-header > div {
+        min-width: 0;
       }
 
       .card-header h3,
@@ -448,6 +461,7 @@
       .card-header p,
       .card-header small {
         color: var(--text-soft);
+        overflow-wrap: anywhere;
       }
 
       .metric-grid {
@@ -458,6 +472,7 @@
 
       .metric-card {
         width: 100%;
+        height: 100%;
         text-align: left;
         padding: 14px;
         border-radius: 18px;
@@ -510,7 +525,7 @@
 
       .metric-card strong {
         margin-top: 8px;
-        font-size: 1.18rem;
+        font-size: clamp(1.02rem, 2.8vw, 1.18rem);
         font-weight: 700;
         letter-spacing: -0.03em;
       }
@@ -528,6 +543,7 @@
 
       .action-tile {
         width: 100%;
+        height: 100%;
         padding: 14px;
         border-radius: 18px;
         background: rgba(255, 255, 255, 0.04);
@@ -550,6 +566,7 @@
         color: var(--text-soft);
         font-size: 0.8rem;
         line-height: 1.45;
+        overflow-wrap: anywhere;
       }
 
       .overview-grid {
@@ -659,8 +676,13 @@
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) auto auto;
         gap: 12px;
-        align-items: center;
+        align-items: start;
         transition: transform var(--transition), background var(--transition), border-color var(--transition);
+      }
+
+      .list-card--selected {
+        border-color: rgba(73, 216, 110, 0.24);
+        background: rgba(255, 255, 255, 0.08);
       }
 
       .avatar {
@@ -683,6 +705,7 @@
       .list-card__content h4,
       .list-card__value strong {
         font-size: 1rem;
+        overflow-wrap: anywhere;
       }
 
       .list-card__content p,
@@ -694,6 +717,7 @@
 
       .list-card__value {
         text-align: right;
+        min-width: 0;
       }
 
       .status-indicator {
@@ -794,6 +818,10 @@
         margin-bottom: 18px;
       }
 
+      .detail-hero > div {
+        min-width: 0;
+      }
+
       .detail-hero h3,
       .detail-hero p {
         margin: 0;
@@ -818,12 +846,13 @@
         display: flex;
         justify-content: space-between;
         gap: 12px;
-        align-items: center;
+        align-items: flex-start;
         color: var(--text-soft);
       }
 
       .detail-line strong {
         color: var(--text);
+        text-align: right;
       }
 
       .late-box {
@@ -1034,7 +1063,8 @@
         display: flex;
         justify-content: space-between;
         gap: 12px;
-        align-items: center;
+        align-items: flex-start;
+        flex-wrap: wrap;
       }
 
       .settings-row strong {
@@ -1146,14 +1176,15 @@
         min-height: 100%;
         display: flex;
         justify-content: center;
-        align-items: flex-end;
-        padding: 14px;
+        align-items: center;
+        padding: 18px 14px;
       }
 
       .modal__card {
         width: min(100%, 430px);
         max-height: calc(100vh - 28px);
         overflow: auto;
+        overscroll-behavior: contain;
         padding: 14px 18px 18px;
         border-radius: 30px;
         background:
@@ -1220,16 +1251,21 @@
           border-radius: 0;
           border: 0;
         }
-      }
 
-      @media (max-width: 360px) {
-        .metric-grid,
-        .preview-grid,
-        .field-grid,
-        .modal__footer,
-        .detail-actions,
+        .app {
+          padding: 10px 16px 164px;
+        }
+
         .quick-grid {
           grid-template-columns: 1fr;
+        }
+
+        .topbar {
+          gap: 10px;
+        }
+
+        .topbar__title p {
+          font-size: 0.92rem;
         }
 
         .overview-grid {
@@ -1237,6 +1273,12 @@
           justify-items: center;
         }
 
+        .modal__sheet {
+          align-items: flex-end;
+        }
+      }
+
+      @media (max-width: 540px) {
         .list-card {
           grid-template-columns: auto minmax(0, 1fr);
         }
@@ -1248,6 +1290,16 @@
 
         .list-card__value {
           text-align: left;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .metric-grid,
+        .preview-grid,
+        .field-grid,
+        .modal__footer,
+        .detail-actions {
+          grid-template-columns: 1fr;
         }
       }
     </style>
@@ -1573,7 +1625,12 @@
         }
 
         function toWhatsAppPhone(phone) {
-          return String(phone || "").replace(/\D/g, "");
+          const digits = String(phone || "").replace(/\D/g, "");
+          if (!digits) {
+            return "";
+          }
+
+          return digits.startsWith("55") ? digits : "55" + digits;
         }
 
         function escapeHtml(value) {
@@ -1589,18 +1646,46 @@
           const interestAmount = principal * (Number(loan.interestRate || 0) / 100);
           const totalOriginal = principal + interestAmount;
           const diff = daysUntil(loan.dueDate);
-          const rawLateDays = Math.max(Math.floor((getToday() - parseDate(loan.dueDate)) / 86400000), 0);
-          const paidAmount = (loan.payments || []).reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
-          const lateInterest = rawLateDays > 0
-            ? totalOriginal * (Number(loan.dailyLateRate || 0) / 100) * rawLateDays
-            : 0;
-          const totalUpdated = totalOriginal + lateInterest;
+          const payments = (loan.payments || [])
+            .slice()
+            .sort((a, b) => parseDate(a.paidAt) - parseDate(b.paidAt));
+          const paidAmount = payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
+          let accruedLateDays = 0;
+          let settledAt = null;
+          let totalUpdated = totalOriginal;
+          let cumulativePaid = 0;
+
+          for (const payment of payments) {
+            cumulativePaid += Number(payment.amount || 0);
+            const daysLateAtPayment = Math.max(
+              Math.floor((parseDate(payment.paidAt) - parseDate(loan.dueDate)) / 86400000),
+              0
+            );
+            const totalAtPayment =
+              totalOriginal + totalOriginal * (Number(loan.dailyLateRate || 0) / 100) * daysLateAtPayment;
+
+            if (cumulativePaid >= totalAtPayment - 0.01) {
+              accruedLateDays = daysLateAtPayment;
+              totalUpdated = totalAtPayment;
+              settledAt = payment.paidAt;
+              break;
+            }
+          }
+
+          if (!settledAt) {
+            accruedLateDays = Math.max(Math.floor((getToday() - parseDate(loan.dueDate)) / 86400000), 0);
+            totalUpdated =
+              totalOriginal + totalOriginal * (Number(loan.dailyLateRate || 0) / 100) * accruedLateDays;
+          }
+
+          const lateInterest = Math.max(totalUpdated - totalOriginal, 0);
           const balance = Math.max(totalUpdated - paidAmount, 0);
 
           let status = "em-dia";
-          if (balance === 0 && paidAmount > 0) {
+          if (settledAt || (balance === 0 && paidAmount > 0)) {
             status = "pago";
-          } else if (rawLateDays > 0) {
+          } else if (accruedLateDays > 0) {
             status = "atrasado";
           } else if (diff === 0) {
             status = "vence-hoje";
@@ -1615,12 +1700,13 @@
             totalOriginal,
             totalUpdated,
             lateInterest,
-            lateDays: rawLateDays,
+            lateDays: accruedLateDays,
             paidAmount,
             balance,
             daysRemaining: diff,
             status,
-            monthlyProfit: Math.max(Math.min(paidAmount, totalOriginal) - principal, 0)
+            settledAt,
+            monthlyProfit: Math.max(Math.min(paidAmount, totalUpdated) - principal, 0)
           };
         }
 
@@ -1647,7 +1733,8 @@
         function getMetrics() {
           const loans = getLoans();
           const totalEmprestado = loans.reduce((sum, loan) => sum + loan.principal, 0);
-          const totalReceber = loans.reduce((sum, loan) => sum + loan.totalUpdated, 0);
+          const totalReceber = loans.reduce((sum, loan) => sum + loan.balance, 0);
+          const totalProjetado = loans.reduce((sum, loan) => sum + loan.totalUpdated, 0);
           const totalPago = loans.reduce((sum, loan) => sum + loan.paidAmount, 0);
           const totalAtrasado = loans
             .filter((loan) => loan.status === "atrasado")
@@ -1668,6 +1755,7 @@
             loans,
             totalEmprestado,
             totalReceber,
+            totalProjetado,
             totalPago,
             totalAtrasado,
             totalEmDia,
@@ -1805,6 +1893,19 @@
             ", passando para lembrar do empréstimo com vencimento em " +
             formatDate(loan.dueDate) +
             ". O valor atualizado até hoje é " +
+            formatCurrency(loan.balance || loan.totalUpdated) +
+            ".";
+          return "https://wa.me/" + phone + "?text=" + encodeURIComponent(message);
+        }
+
+        function whatsappLink(loan) {
+          const phone = toWhatsAppPhone(loan.phone);
+          const message =
+            "Ola " +
+            loan.name +
+            ", tudo bem? Estou passando para lembrar sobre o emprestimo com vencimento em " +
+            formatDate(loan.dueDate) +
+            ". O valor atualizado ate hoje e " +
             formatCurrency(loan.balance || loan.totalUpdated) +
             ".";
           return "https://wa.me/" + phone + "?text=" + encodeURIComponent(message);
@@ -1966,6 +2067,178 @@
                   ${renderAlertRow("Lucro total", formatCurrency(metrics.lucroTotal), "status-text--green")}
                   ${renderAlertRow("Lucro recebido", formatCurrency(metrics.lucroRecebido), "status-text--green")}
                   ${renderAlertRow("Em atraso", String(metrics.atrasados.length) + " operação(ões)", "status-text--red")}
+                </div>
+              </section>
+            </div>
+          `;
+        }
+
+        function renderDashboard() {
+          const metrics = getMetrics();
+          dom.screens.dashboard.innerHTML = `
+            <div class="topbar">
+              <button type="button" class="icon-button" data-action="open-settings">
+                <i class="fa-solid fa-bars"></i>
+              </button>
+              <div class="topbar__title">
+                <h1>Ola, Daniel</h1>
+                <p>Aqui esta o resumo financeiro completo da sua carteira.</p>
+              </div>
+              <div class="topbar__actions">
+                <button type="button" class="icon-button notification-dot" data-action="go-loans">
+                  <i class="fa-regular fa-bell"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="stack">
+              <section class="card card--glass">
+                <div class="card-header">
+                  <div>
+                    <h3>Resumo geral</h3>
+                    <p>Home principal com status automatico e carteira viva.</p>
+                  </div>
+                  <small>Atualizado hoje, ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</small>
+                </div>
+                <div class="metric-grid">
+                  <button type="button" class="metric-card" data-action="go-reports">
+                    <span class="metric-card__icon metric-card__icon--green"><i class="fa-solid fa-scale-balanced"></i></span>
+                    <span>Total emprestado</span>
+                    <strong>${formatCurrency(metrics.totalEmprestado)}</strong>
+                    <small>Capital aplicado</small>
+                  </button>
+                  <button type="button" class="metric-card" data-action="go-loans">
+                    <span class="metric-card__icon metric-card__icon--blue"><i class="fa-solid fa-sack-dollar"></i></span>
+                    <span>Total a receber</span>
+                    <strong>${formatCurrency(metrics.totalReceber)}</strong>
+                    <small>Saldo aberto atualizado</small>
+                  </button>
+                  <button type="button" class="metric-card" data-action="filter-on-time">
+                    <span class="metric-card__icon metric-card__icon--yellow"><i class="fa-solid fa-clock"></i></span>
+                    <span>Total em dia</span>
+                    <strong>${formatCurrency(metrics.totalEmDia)}</strong>
+                    <small>${metrics.vencendoHoje.length} vencendo hoje</small>
+                  </button>
+                  <button type="button" class="metric-card" data-action="filter-overdue">
+                    <span class="metric-card__icon metric-card__icon--red"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                    <span>Total atrasado</span>
+                    <strong>${formatCurrency(metrics.totalAtrasado)}</strong>
+                    <small>${metrics.atrasados.length} operacao(oes)</small>
+                  </button>
+                  <button type="button" class="metric-card" data-action="go-reports">
+                    <span class="metric-card__icon metric-card__icon--green"><i class="fa-solid fa-circle-dollar-to-slot"></i></span>
+                    <span>Total pago</span>
+                    <strong>${formatCurrency(metrics.totalPago)}</strong>
+                    <small>Recebimentos confirmados</small>
+                  </button>
+                  <button type="button" class="metric-card" data-action="open-settings">
+                    <span class="metric-card__icon metric-card__icon--blue"><i class="fa-solid fa-users"></i></span>
+                    <span>Clientes</span>
+                    <strong>${metrics.clientsCount}</strong>
+                    <small>Base ativa da carteira</small>
+                  </button>
+                </div>
+              </section>
+
+              <section class="card card--glass">
+                <div class="card-header">
+                  <div>
+                    <h3>Painel operacional</h3>
+                  </div>
+                </div>
+                <div class="quick-grid">
+                  <button type="button" class="action-tile" data-action="go-create">
+                    <strong>Novo emprestimo</strong>
+                    <span>Cadastro com calculo automatico</span>
+                  </button>
+                  <button type="button" class="action-tile" data-action="go-loans">
+                    <strong>Cobrancas</strong>
+                    <span>Ver carteira, atrasos e detalhes</span>
+                  </button>
+                  <button type="button" class="action-tile" data-action="go-reports">
+                    <strong>Relatorios</strong>
+                    <span>Lucro, inadimplencia e evolucao</span>
+                  </button>
+                </div>
+              </section>
+
+              <section class="card card--glass">
+                <div class="card-header">
+                  <div>
+                    <h3>Visao geral</h3>
+                  </div>
+                </div>
+                <div class="overview-grid">
+                  <div class="donut-wrap">
+                    <canvas id="status-chart"></canvas>
+                    <div class="donut-center">
+                      <span>Saldo em aberto</span>
+                      <strong>${formatCurrency(metrics.totalAberto)}</strong>
+                    </div>
+                  </div>
+                  <div class="legend-list">
+                    <div class="legend-row">
+                      <span class="legend-dot legend-dot--green"></span>
+                      <span>Em dia</span>
+                      <strong>${formatCurrency(metrics.totalEmDia)}</strong>
+                    </div>
+                    <div class="legend-row">
+                      <span class="legend-dot legend-dot--red"></span>
+                      <span>Atrasados</span>
+                      <strong>${formatCurrency(metrics.totalAtrasado)}</strong>
+                    </div>
+                    <div class="legend-row">
+                      <span class="legend-dot legend-dot--blue"></span>
+                      <span>Pagos</span>
+                      <strong>${formatCurrency(metrics.totalPago)}</strong>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="card card--glass">
+                <div class="card-header">
+                  <div>
+                    <h3>Indicadores automaticos</h3>
+                  </div>
+                </div>
+                <div class="metric-grid">
+                  <div class="metric-card">
+                    <span class="metric-card__icon metric-card__icon--green"><i class="fa-solid fa-chart-pie"></i></span>
+                    <span>Lucro total</span>
+                    <strong>${formatCurrency(metrics.lucroTotal)}</strong>
+                    <small>Juros contratados da carteira</small>
+                  </div>
+                  <div class="metric-card">
+                    <span class="metric-card__icon metric-card__icon--green"><i class="fa-solid fa-chart-line"></i></span>
+                    <span>Lucro recebido</span>
+                    <strong>${formatCurrency(metrics.lucroRecebido)}</strong>
+                    <small>Lucro ja realizado</small>
+                  </div>
+                </div>
+              </section>
+
+              <section class="card card--glass">
+                <div class="card-header">
+                  <div>
+                    <h3>Proximos vencimentos</h3>
+                  </div>
+                  <button type="button" class="card-link" data-action="go-loans">Ver todos</button>
+                </div>
+                <div class="loan-list">
+                  ${metrics.proximos.length ? metrics.proximos.map(renderLoanCard).join("") : renderEmpty("Nenhum emprestimo em aberto no momento.")}
+                </div>
+              </section>
+
+              <section class="card card--glass">
+                <div class="card-header">
+                  <div>
+                    <h3>Lista de atrasados</h3>
+                    <p>Itens que exigem cobranca imediata.</p>
+                  </div>
+                </div>
+                <div class="loan-list">
+                  ${metrics.atrasados.length ? metrics.atrasados.slice(0, 4).map(renderLoanCard).join("") : renderEmpty("Nenhuma operacao atrasada no momento.")}
                 </div>
               </section>
             </div>
@@ -2220,6 +2493,108 @@
           }
         }
 
+        function renderReportsScreen() {
+          const metrics = getMetrics();
+
+          dom.screens.reports.innerHTML = `
+            <div class="topbar topbar--center">
+              <div class="topbar__actions">
+                <button type="button" class="icon-button" data-action="go-dashboard">
+                  <i class="fa-solid fa-arrow-left"></i>
+                </button>
+              </div>
+              <div class="topbar__title">
+                <h2>Relatorios</h2>
+              </div>
+              <div class="topbar__actions">
+                <button type="button" class="icon-button" data-action="go-loans">
+                  <i class="fa-solid fa-chart-line"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="stack">
+              <section class="card card--glass">
+                <div class="card-header">
+                  <div>
+                    <h3>Resumo financeiro</h3>
+                    <p>Panorama consolidado da carteira e dos recebimentos.</p>
+                  </div>
+                  <span class="pill">${metrics.loans.length} emprestimo(s)</span>
+                </div>
+                <div class="metric-grid">
+                  <div class="metric-card">
+                    <span class="metric-card__icon metric-card__icon--blue"><i class="fa-solid fa-money-bill-trend-up"></i></span>
+                    <span>Total emprestado</span>
+                    <strong>${formatCurrency(metrics.totalEmprestado)}</strong>
+                    <small>Capital total investido</small>
+                  </div>
+                  <div class="metric-card">
+                    <span class="metric-card__icon metric-card__icon--blue"><i class="fa-solid fa-sack-dollar"></i></span>
+                    <span>Total a receber</span>
+                    <strong>${formatCurrency(metrics.totalReceber)}</strong>
+                    <small>Saldo aberto atualizado</small>
+                  </div>
+                  <div class="metric-card">
+                    <span class="metric-card__icon metric-card__icon--green"><i class="fa-solid fa-circle-dollar-to-slot"></i></span>
+                    <span>Total recebido</span>
+                    <strong>${formatCurrency(metrics.totalPago)}</strong>
+                    <small>Pagamentos confirmados</small>
+                  </div>
+                  <div class="metric-card">
+                    <span class="metric-card__icon metric-card__icon--red"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                    <span>Total atrasado</span>
+                    <strong>${formatCurrency(metrics.totalAtrasado)}</strong>
+                    <small>${metrics.atrasados.length} operacao(oes)</small>
+                  </div>
+                  <div class="metric-card">
+                    <span class="metric-card__icon metric-card__icon--green"><i class="fa-solid fa-chart-pie"></i></span>
+                    <span>Lucro total</span>
+                    <strong>${formatCurrency(metrics.lucroTotal)}</strong>
+                    <small>Juros contratados</small>
+                  </div>
+                  <div class="metric-card">
+                    <span class="metric-card__icon metric-card__icon--yellow"><i class="fa-solid fa-percent"></i></span>
+                    <span>Inadimplencia</span>
+                    <strong>${metrics.percentageLate}%</strong>
+                    <small>Percentual da carteira</small>
+                  </div>
+                </div>
+
+                <div class="chart-box">
+                  <h4>Evolucao dos recebimentos</h4>
+                  <canvas id="line-chart"></canvas>
+                </div>
+
+                <div class="summary-list">
+                  <div class="summary-line">
+                    <span class="legend-dot legend-dot--green"></span>
+                    <span>Em dia</span>
+                    <strong>${formatCurrency(metrics.totalEmDia)}</strong>
+                    <small>${100 - metrics.percentageLate}%</small>
+                  </div>
+                  <div class="summary-line">
+                    <span class="legend-dot legend-dot--red"></span>
+                    <span>Atrasados</span>
+                    <strong>${formatCurrency(metrics.totalAtrasado)}</strong>
+                    <small>${metrics.percentageLate}%</small>
+                  </div>
+                  <div class="summary-line">
+                    <span class="legend-dot legend-dot--blue"></span>
+                    <span>Saldo projetado</span>
+                    <strong>${formatCurrency(metrics.totalProjetado)}</strong>
+                    <small>Com juros e multas</small>
+                  </div>
+                </div>
+              </section>
+            </div>
+          `;
+
+          if (state.activeScreen === "reports") {
+            renderCharts();
+          }
+        }
+
         function renderSettingsScreen() {
           dom.screens.settings.innerHTML = `
             <div class="topbar topbar--center">
@@ -2289,8 +2664,9 @@
 
         function renderLoanCard(loan) {
           const meta = getStatusMeta(loan);
+          const selectedClass = state.selectedLoanId === loan.id ? " list-card--selected" : "";
           return `
-            <button type="button" class="list-card" data-action="select-loan" data-loan-id="${loan.id}">
+            <button type="button" class="list-card${selectedClass}" data-action="select-loan" data-loan-id="${loan.id}">
               <span class="avatar">${initials(loan.name)}</span>
               <span class="list-card__content">
                 <h4>${escapeHtml(loan.name)}</h4>
