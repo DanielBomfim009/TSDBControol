@@ -1,58 +1,38 @@
-# TSDB
+# TSDBControol
 
-Aplicacao pessoal para controle de emprestimos, recebimentos, atrasos e vencimentos.
+Aplicativo financeiro premium para controle pessoal de emprestimos, juros, atrasos, pagamentos e cobrancas via WhatsApp.
 
-## Stack atual
+## Estrutura final
 
-- `HTML`
-- `CSS`
-- `JavaScript` modular
-- `PWA` com `manifest.webmanifest`
-- `Service Worker` para cache basico
-- `localStorage` para persistencia inicial
+- `index.html`: estrutura principal do PWA e modais.
+- `styles.css`: visual dark premium, mobile-first, cards, menus, formularios e responsividade.
+- `app.js`: persistencia local, calculos automaticos, dashboards, relatorios, filtros, backup e WhatsApp.
+- `manifest.webmanifest`: configuracao de instalacao do PWA.
+- `sw.js`: service worker para cache offline dos arquivos principais.
+- `icons/`: icones do aplicativo.
 
-## Estrutura
+## Funcionalidades
 
-- `index.html`: casca principal da aplicacao
-- `src/app.js`: logica da interface, calculos e persistencia local
-- `src/styles.css`: identidade visual escura com dourado
-- `src/data/mockData.js`: base inicial de demonstracao
-- `src/utils/format.js`: formatadores de moeda, data e percentual
-- `manifest.webmanifest`: configuracao do PWA
-- `sw.js`: cache offline inicial
+- Dashboard inicial com totais, lucro, clientes, vencimentos e atrasados.
+- Cadastro e edicao de emprestimos com calculo em tempo real.
+- Juros contratado automatico.
+- Juros diario por atraso automatico.
+- Status automaticos: em dia, vence hoje, proximo do vencimento, atrasado e pago.
+- Lista com busca e filtros.
+- Registro de pagamentos.
+- Relatorios com graficos Chart.js.
+- Backup JSON, importacao, limpeza de dados e configuracoes padrao.
+- Cobranca via WhatsApp com mensagem preenchida automaticamente.
 
 ## Publicacao no GitHub Pages
 
-Como o projeto e estatico, ele pode ser publicado direto no GitHub Pages sem etapa de build.
+O projeto e estatico e nao precisa de build.
 
-### Opcao 1: Publicar pela branch principal
-
-1. Suba os arquivos para o repositorio no GitHub.
-2. Entre em `Settings > Pages`.
-3. Em `Build and deployment`, selecione:
-   - `Source`: `Deploy from a branch`
-   - `Branch`: `main`
-   - `Folder`: `/ (root)`
-4. Salve e aguarde o link do Pages ser gerado.
-
-### Opcao 2: Publicar com GitHub Actions
-
-Se preferir, voce pode adicionar um workflow depois, mas para esta versao nao e necessario.
+1. Abra `Settings > Pages` no repositorio.
+2. Em `Build and deployment`, selecione `Deploy from a branch`.
+3. Use a branch `main` e a pasta `/ (root)`.
+4. Salve e aguarde a URL do GitHub Pages atualizar.
 
 ## Dados
 
-Atualmente os dados ficam no navegador via `localStorage`.
-
-Isso significa:
-
-- o app funciona sem servidor
-- cada navegador/dispositivo tera sua propria base local
-- o backup manual em JSON e importante
-
-## Proximos passos recomendados
-
-- trocar `mockData` por fluxo completo de uso real
-- adicionar edicao e exclusao de clientes/emprestimos/pagamentos
-- criar detalhes por cliente e por emprestimo
-- migrar a persistencia para `IndexedDB`
-- adicionar protecao local por PIN
+Os dados ficam no `localStorage` do navegador. Para trocar de aparelho ou navegador, use a exportacao e importacao de backup JSON dentro do app.
