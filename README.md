@@ -10,6 +10,7 @@ Aplicativo financeiro premium para controle pessoal de emprestimos, juros, atras
 - `manifest.webmanifest`: configuracao de instalacao do PWA.
 - `sw.js`: service worker para cache offline dos arquivos principais.
 - `icons/`: icones do aplicativo.
+- `assets/`: logomarca propria da TSDB Emprestimos.
 
 ## Funcionalidades
 

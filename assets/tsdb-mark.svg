@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">Marca TSDB</title>
+  <desc id="desc">Escudo dourado com cifra, simbolizando protecao financeira.</desc>
+  <defs>
+    <radialGradient id="mark-bg" cx="50%" cy="18%" r="82%">
+      <stop offset="0%" stop-color="#4a3510" />
+      <stop offset="58%" stop-color="#141007" />
+      <stop offset="100%" stop-color="#050402" />
+    </radialGradient>
+    <linearGradient id="mark-gold" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#fff1a8" />
+      <stop offset="42%" stop-color="#e8b747" />
+      <stop offset="100%" stop-color="#8d5b13" />
+    </linearGradient>
+    <filter id="gold-glow" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0.95 0 1 0 0 0.67 0 0 1 0 0.16 0 0 0 0.65 0" />
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="160" height="160" rx="42" fill="url(#mark-bg)" />
+  <path d="M80 19l48 17v35c0 35-19 59-48 73-29-14-48-38-48-73V36z" fill="rgba(244,199,93,0.08)" stroke="url(#mark-gold)" stroke-width="7" stroke-linejoin="round" filter="url(#gold-glow)" />
+  <path d="M85 44v10c13 2 21 10 21 22H90c0-5-4-8-11-8-6 0-10 3-10 7 0 5 5 7 17 10 17 5 25 12 25 26 0 13-10 22-26 25v11H72v-11c-17-3-27-13-27-28h16c0 8 7 12 17 12 8 0 13-3 13-8 0-6-5-8-18-12-16-5-24-12-24-25 0-12 9-21 23-24V44z" fill="url(#mark-gold)" />
+</svg>

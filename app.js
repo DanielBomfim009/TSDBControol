@@ -566,13 +566,20 @@ function setScreen(screen) {
 }
 
 function renderHeader(title, subtitle, backAction, actions = "") {
+  const isBrandHeader = !backAction;
   return `
     <header class="screen-header centered">
       <button class="icon-button" type="button" data-action="${backAction || "open-drawer"}" aria-label="${backAction ? "Voltar" : "Abrir menu"}">
         <i class="fa-solid ${backAction ? "fa-arrow-left" : "fa-bars"}"></i>
       </button>
-      <div class="screen-title">
-        <h1>${title}</h1>
+      <div class="screen-title ${isBrandHeader ? "brand-screen-title" : ""}">
+        ${
+          isBrandHeader
+            ? `<div class="brand-heading">
+                <img src="./assets/tsdb-logo.svg" alt="TSDB Emprestimos" />
+              </div>`
+            : `<h1>${title}</h1>`
+        }
         ${subtitle ? `<p>${subtitle}</p>` : ""}
       </div>
       <div class="header-actions">${actions}</div>
@@ -596,7 +603,7 @@ function renderDashboard() {
       <div class="section-head">
         <div>
           <h2>Resumo geral</h2>
-          <p>${new Date().toLocaleDateString("pt-BR")} - ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</p>
+          <p>Carteira atualizada automaticamente</p>
         </div>
       </div>
       <div class="metric-grid">
@@ -1405,7 +1412,7 @@ function renderDrawer() {
   dom.drawerPanel.innerHTML = `
     <header class="drawer-header">
       <div class="loading-logo">
-        <i class="fa-solid fa-shield-halved"></i>
+        <img src="./assets/tsdb-mark.svg" alt="" />
       </div>
       <div>
         <strong>TSDB Emprestimos</strong>
@@ -1744,12 +1751,12 @@ function printLoanDocument(loanId, type) {
         <meta charset="utf-8" />
         <title>${title}</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 36px; color: #101820; line-height: 1.55; }
-          .doc { max-width: 760px; margin: 0 auto; border: 1px solid #d8dee8; border-radius: 18px; padding: 28px; }
+          body { font-family: Manrope, Arial, sans-serif; margin: 36px; color: #211806; line-height: 1.55; }
+          .doc { max-width: 760px; margin: 0 auto; border: 1px solid #d8b75c; border-radius: 18px; padding: 28px; }
           h1 { margin: 0 0 8px; }
-          .muted { color: #637083; margin-bottom: 28px; }
+          .muted { color: #806b3c; margin-bottom: 28px; }
           .sign { margin-top: 56px; display: grid; gap: 26px; }
-          .line { border-top: 1px solid #101820; padding-top: 8px; text-align: center; }
+          .line { border-top: 1px solid #211806; padding-top: 8px; text-align: center; }
         </style>
       </head>
       <body>

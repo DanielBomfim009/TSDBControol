@@ -1,10 +1,12 @@
-const CACHE_NAME = "tsdb-premium-v7";
+const CACHE_NAME = "tsdb-premium-v8";
 const APP_ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./manifest.webmanifest",
+  "./assets/tsdb-mark.svg",
+  "./assets/tsdb-logo.svg",
   "./icons/icon-192.svg",
   "./icons/icon-512.svg"
 ];
