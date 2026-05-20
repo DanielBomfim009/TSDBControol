@@ -1,4 +1,4 @@
-# TSDBControol
+# TSDB Emprestimos
 
 Aplicativo financeiro premium para controle pessoal de emprestimos, juros, atrasos, pagamentos e cobrancas via WhatsApp.
 

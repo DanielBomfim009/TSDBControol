@@ -586,8 +586,8 @@ function renderDashboard() {
 
   dom.screens.dashboard.innerHTML = `
     ${renderHeader(
-      "Ola, Daniel",
-      "Sua carteira atualizada com juros, atrasos e recebimentos automaticos.",
+      "TSDB Emprestimos",
+      "Sistema inteligente para controlar juros, vencimentos e recebimentos.",
       null,
       `<button class="icon-button" type="button" data-action="loans" aria-label="Alertas"><i class="fa-regular fa-bell"></i></button>`
     )}
@@ -1405,10 +1405,10 @@ function renderDrawer() {
   dom.drawerPanel.innerHTML = `
     <header class="drawer-header">
       <div class="loading-logo">
-        <i class="fa-solid fa-chart-line"></i>
+        <i class="fa-solid fa-shield-halved"></i>
       </div>
       <div>
-        <strong>TSDBControol</strong>
+        <strong>TSDB Emprestimos</strong>
         <span>Carteira premium</span>
       </div>
       <button class="icon-button" type="button" data-action="close-drawer" aria-label="Fechar menu">
@@ -1755,7 +1755,7 @@ function printLoanDocument(loanId, type) {
       <body>
         <main class="doc">
           <h1>${title}</h1>
-          <p class="muted">Documento gerado pelo TSDBControol em ${formatDate(todayIso())}.</p>
+          <p class="muted">Documento gerado pelo TSDB Emprestimos em ${formatDate(todayIso())}.</p>
           ${body}
           <section class="sign">
             <div class="line">Credor</div>
@@ -1949,7 +1949,7 @@ function importBackup(event) {
 }
 
 function clearData() {
-  if (!confirm("Limpar todos os dados do TSDBControol?")) {
+  if (!confirm("Limpar todos os dados do TSDB Emprestimos?")) {
     return;
   }
 
@@ -1999,7 +1999,7 @@ function renderCharts() {
         datasets: [
           {
             data: [metrics.totalOnTime, metrics.totalOverdue, metrics.totalPaid],
-            backgroundColor: ["#42d66f", "#ff5e62", "#56b7ff"],
+            backgroundColor: ["#f0bd3d", "#ff654e", "#8d7c55"],
             borderWidth: 0
           }
         ]
@@ -2029,13 +2029,13 @@ function renderCharts() {
           {
             label: "Recebido",
             data: series.values,
-            borderColor: "#42d66f",
-            backgroundColor: "rgba(66, 214, 111, 0.14)",
+            borderColor: "#f0bd3d",
+            backgroundColor: "rgba(240, 189, 61, 0.16)",
             borderWidth: 3,
             fill: true,
             tension: 0.36,
             pointRadius: 3,
-            pointBackgroundColor: "#42d66f"
+            pointBackgroundColor: "#f0bd3d"
           }
         ]
       },
@@ -2047,13 +2047,13 @@ function renderCharts() {
         },
         scales: {
           x: {
-            grid: { color: "rgba(255,255,255,0.05)" },
-            ticks: { color: "#9aaabc" }
+            grid: { color: "rgba(244,199,93,0.09)" },
+            ticks: { color: "#c8b987" }
           },
           y: {
-            grid: { color: "rgba(255,255,255,0.05)" },
+            grid: { color: "rgba(244,199,93,0.09)" },
             ticks: {
-              color: "#9aaabc",
+              color: "#c8b987",
               callback: (value) => formatCurrency(value).replace(",00", "")
             }
           }

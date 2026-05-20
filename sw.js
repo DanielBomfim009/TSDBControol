@@ -1,4 +1,4 @@
-const CACHE_NAME = "tsdb-premium-v5";
+const CACHE_NAME = "tsdb-premium-v7";
 const APP_ASSETS = [
   "./",
   "./index.html",

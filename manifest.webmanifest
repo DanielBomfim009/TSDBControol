@@ -1,11 +1,11 @@
 {
-  "name": "TSDBControol",
+  "name": "TSDB Emprestimos",
   "short_name": "TSDB",
   "description": "Aplicativo financeiro premium para controle automatizado de emprestimos, juros, atrasos e recebimentos.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#050a12",
-  "theme_color": "#07111d",
+  "background_color": "#050402",
+  "theme_color": "#0b0904",
   "lang": "pt-BR",
   "orientation": "portrait",
   "icons": [
