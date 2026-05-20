@@ -49,6 +49,7 @@
           <section class="screen is-active" id="screen-dashboard" data-screen-panel="dashboard"></section>
           <section class="screen" id="screen-loans" data-screen-panel="loans"></section>
           <section class="screen" id="screen-new-loan" data-screen-panel="new-loan"></section>
+          <section class="screen" id="screen-calendar" data-screen-panel="calendar"></section>
           <section class="screen" id="screen-reports" data-screen-panel="reports"></section>
           <section class="screen" id="screen-settings" data-screen-panel="settings"></section>
         </section>
@@ -75,6 +76,11 @@
             <span>Ajustes</span>
           </button>
         </nav>
+
+        <aside class="drawer" id="app-drawer" aria-hidden="true">
+          <button class="drawer-backdrop" type="button" data-action="close-drawer" aria-label="Fechar menu"></button>
+          <section class="drawer-panel" id="drawer-panel" aria-label="Menu principal"></section>
+        </aside>
       </div>
     </main>
 
@@ -145,6 +151,29 @@
         </header>
         <div class="menu-actions" id="loan-menu-actions"></div>
       </div>
+    </div>
+
+    <div class="modal pin-modal" id="pin-modal" aria-hidden="true">
+      <form class="modal-card pin-card" id="pin-form">
+        <div class="loading-logo">
+          <i class="fa-solid fa-lock"></i>
+        </div>
+        <header class="modal-header pin-header">
+          <div>
+            <h2>TSDB protegido</h2>
+            <p>Digite seu PIN para acessar a carteira.</p>
+          </div>
+        </header>
+        <label class="field">
+          <span>PIN de acesso</span>
+          <input id="pin-input" name="pin" type="password" inputmode="numeric" autocomplete="current-password" minlength="4" required />
+        </label>
+        <p class="pin-error" id="pin-error" aria-live="polite"></p>
+        <button class="button button-primary" type="submit">
+          <i class="fa-solid fa-unlock-keyhole"></i>
+          Desbloquear
+        </button>
+      </form>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>

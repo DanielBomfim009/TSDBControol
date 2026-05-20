@@ -19,10 +19,16 @@ Aplicativo financeiro premium para controle pessoal de emprestimos, juros, atras
 - Juros diario por atraso automatico.
 - Status automaticos: em dia, vence hoje, proximo do vencimento, atrasado e pago.
 - Lista com busca e filtros.
+- Agenda de vencimentos, atrasos e cobrancas.
+- Menu hamburguer com atalhos operacionais.
 - Registro de pagamentos.
+- Historico e auditoria por emprestimo.
 - Relatorios com graficos Chart.js.
-- Backup JSON, importacao, limpeza de dados e configuracoes padrao.
-- Cobranca via WhatsApp com mensagem preenchida automaticamente.
+- Periodos de relatorio: hoje, 7 dias, mes, ano e tudo.
+- Backup JSON, exportacao CSV, importacao, limpeza de dados e configuracoes padrao.
+- Cobranca via WhatsApp com mensagens rapidas por contexto.
+- Geracao de contrato e recibo para impressao/PDF.
+- Protecao local por PIN.
 
 ## Publicacao no GitHub Pages
 

@@ -6,7 +6,8 @@ const DAY_MS = 86400000;
 const defaultSettings = {
   defaultInterestRate: 30,
   defaultDailyLateRate: 2,
-  pinEnabled: false
+  pinEnabled: false,
+  pinHash: ""
 };
 
 const state = {
@@ -18,6 +19,7 @@ const state = {
   selectedLoanId: null,
   editingLoanId: null,
   draft: null,
+  reportPeriod: "month",
   charts: {
     donut: null,
     monthly: null
@@ -30,14 +32,21 @@ const dom = {
     dashboard: document.querySelector("#screen-dashboard"),
     loans: document.querySelector("#screen-loans"),
     newLoan: document.querySelector("#screen-new-loan"),
+    calendar: document.querySelector("#screen-calendar"),
     reports: document.querySelector("#screen-reports"),
     settings: document.querySelector("#screen-settings")
   },
   navItems: Array.from(document.querySelectorAll(".nav-item")),
+  drawer: document.querySelector("#app-drawer"),
+  drawerPanel: document.querySelector("#drawer-panel"),
   paymentModal: document.querySelector("#payment-modal"),
   paymentForm: document.querySelector("#payment-form"),
   loanMenuModal: document.querySelector("#loan-menu-modal"),
-  loanMenuActions: document.querySelector("#loan-menu-actions")
+  loanMenuActions: document.querySelector("#loan-menu-actions"),
+  pinModal: document.querySelector("#pin-modal"),
+  pinForm: document.querySelector("#pin-form"),
+  pinInput: document.querySelector("#pin-input"),
+  pinError: document.querySelector("#pin-error")
 };
 
 function loadData() {
@@ -57,7 +66,7 @@ function loadData() {
     }
   }
 
-  return { loans: [] };
+  return { audit: [], loans: [] };
 }
 
 function loadSettings() {
@@ -83,6 +92,7 @@ function saveSettings() {
 
 function normalizeData(data) {
   return {
+    audit: Array.isArray(data.audit) ? data.audit.map(normalizeAudit).filter(Boolean) : [],
     loans: (data.loans || []).map((loan) => ({
       id: loan.id || createId(),
       name: String(loan.name || loan.clientName || "Cliente sem nome"),
@@ -122,7 +132,7 @@ function migrateLegacyData(legacy) {
     };
   });
 
-  return { loans };
+  return { audit: [], loans };
 }
 
 function normalizePayment(payment) {
@@ -132,6 +142,20 @@ function normalizePayment(payment) {
     amount: parseNumber(payment.amount),
     method: payment.method || "Pix",
     notes: payment.notes || ""
+  };
+}
+
+function normalizeAudit(entry) {
+  if (!entry || !entry.message) {
+    return null;
+  }
+
+  return {
+    id: entry.id || createId(),
+    type: entry.type || "info",
+    loanId: entry.loanId || "",
+    message: String(entry.message || ""),
+    createdAt: entry.createdAt || new Date().toISOString()
   };
 }
 
@@ -352,6 +376,133 @@ function getMetrics() {
   };
 }
 
+function addAudit(type, message, loanId = "") {
+  state.data.audit = Array.isArray(state.data.audit) ? state.data.audit : [];
+  state.data.audit.unshift({
+    id: createId(),
+    type,
+    loanId,
+    message,
+    createdAt: new Date().toISOString()
+  });
+  state.data.audit = state.data.audit.slice(0, 300);
+}
+
+function getAudit(loanId = "") {
+  return (state.data.audit || [])
+    .filter((entry) => !loanId || entry.loanId === loanId)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+function getPortfolioInsights(metrics = getMetrics()) {
+  const loans = metrics.loans;
+  const openLoans = loans.filter((loan) => loan.status !== "paid");
+  const overdue = metrics.overdue.slice().sort((a, b) => b.lateDays - a.lateDays);
+  const largest = openLoans.slice().sort((a, b) => b.balance - a.balance)[0];
+  const bestPayer = loans
+    .filter((loan) => loan.paidAmount > 0)
+    .sort((a, b) => b.paidAmount - a.paidAmount)[0];
+  const recurrence = new Map();
+
+  loans.forEach((loan) => {
+    const key = loan.name.toLowerCase();
+    recurrence.set(key, {
+      name: loan.name,
+      count: (recurrence.get(key)?.count || 0) + 1
+    });
+  });
+
+  const recurrent = Array.from(recurrence.values()).sort((a, b) => b.count - a.count)[0];
+
+  return [
+    {
+      label: "Maior saldo",
+      value: largest ? largest.name : "Sem saldo aberto",
+      detail: largest ? formatCurrency(largest.balance) : "Carteira quitada",
+      tone: "blue",
+      icon: "fa-arrow-trend-up"
+    },
+    {
+      label: "Maior atraso",
+      value: overdue[0] ? overdue[0].name : "Sem atrasos",
+      detail: overdue[0] ? overdue[0].lateDays + " dia(s)" : "Tudo sob controle",
+      tone: overdue[0] ? "red" : "green",
+      icon: "fa-bell"
+    },
+    {
+      label: "Melhor pagador",
+      value: bestPayer ? bestPayer.name : "Aguardando dados",
+      detail: bestPayer ? formatCurrency(bestPayer.paidAmount) : "Sem pagamentos",
+      tone: "green",
+      icon: "fa-medal"
+    },
+    {
+      label: "Cliente recorrente",
+      value: recurrent && recurrent.count > 1 ? recurrent.name : "Ainda unico",
+      detail: recurrent ? recurrent.count + " operacao(oes)" : "Sem historico",
+      tone: "yellow",
+      icon: "fa-repeat"
+    }
+  ];
+}
+
+function getPeriodRange(period) {
+  const end = today();
+  const start = today();
+
+  if (period === "today") {
+    return { start, end };
+  }
+
+  if (period === "week") {
+    start.setDate(start.getDate() - 6);
+    return { start, end };
+  }
+
+  if (period === "year") {
+    start.setMonth(0, 1);
+    return { start, end };
+  }
+
+  if (period === "all") {
+    return { start: null, end: null };
+  }
+
+  start.setDate(1);
+  return { start, end };
+}
+
+function isDateInRange(value, range) {
+  if (!range.start || !range.end) {
+    return true;
+  }
+
+  const date = parseDate(value);
+  return date >= range.start && date <= range.end;
+}
+
+function getPeriodStats(period = state.reportPeriod) {
+  const range = getPeriodRange(period);
+  const loans = getLoans();
+  const payments = loans.flatMap((loan) =>
+    (loan.payments || []).map((payment) => ({
+      ...payment,
+      loanName: loan.name,
+      principal: loan.principal
+    }))
+  );
+  const periodPayments = payments.filter((payment) => isDateInRange(payment.paidAt, range));
+  const received = periodPayments.reduce((sum, payment) => sum + parseNumber(payment.amount), 0);
+  const count = periodPayments.length;
+
+  return {
+    received,
+    count,
+    averageTicket: count ? received / count : 0,
+    profitReceived: Math.max(received - periodPayments.reduce((sum, payment) => sum + Math.min(payment.principal, parseNumber(payment.amount)), 0), 0)
+  };
+}
+
 function statusMeta(loan) {
   const map = {
     paid: {
@@ -393,8 +544,10 @@ function render() {
   renderDashboard();
   renderLoans();
   renderNewLoan();
+  renderCalendar();
   renderReports();
   renderSettings();
+  renderDrawer();
   setScreen(state.screen);
 }
 
@@ -415,7 +568,7 @@ function setScreen(screen) {
 function renderHeader(title, subtitle, backAction, actions = "") {
   return `
     <header class="screen-header centered">
-      <button class="icon-button" type="button" data-action="${backAction || "settings"}" aria-label="Voltar">
+      <button class="icon-button" type="button" data-action="${backAction || "open-drawer"}" aria-label="${backAction ? "Voltar" : "Abrir menu"}">
         <i class="fa-solid ${backAction ? "fa-arrow-left" : "fa-bars"}"></i>
       </button>
       <div class="screen-title">
@@ -429,6 +582,7 @@ function renderHeader(title, subtitle, backAction, actions = "") {
 
 function renderDashboard() {
   const metrics = getMetrics();
+  const insights = getPortfolioInsights(metrics);
 
   dom.screens.dashboard.innerHTML = `
     ${renderHeader(
@@ -458,8 +612,22 @@ function renderDashboard() {
     <section class="section-block">
       <div class="action-grid">
         ${actionCard("Novo emprestimo", "Cadastro com calculo em tempo real", "fa-plus", "new-loan")}
+        ${actionCard("Agenda", "Calendario de vencimentos e cobrancas", "fa-calendar-days", "calendar")}
         ${actionCard("Cobrar atrasados", "Abra a carteira filtrada por atraso", "fa-bolt", "filter-overdue")}
+        ${actionCard("Exportar backup", "Seguranca rapida dos seus dados", "fa-download", "export")}
       </div>
+    </section>
+
+    <section class="section-block panel-card hero-panel">
+      <div>
+        <span class="eyebrow">Inteligencia da carteira</span>
+        <h3>${metrics.overdue.length ? "Priorize os atrasos antes de novos aportes" : "Carteira saudavel e sob controle"}</h3>
+        <p>${metrics.overdue.length ? `${metrics.overdue.length} operacao(oes) atrasada(s), somando ${formatCurrency(metrics.totalOverdue)}.` : "Nenhuma operacao atrasada no momento. Mantenha a agenda atualizada."}</p>
+      </div>
+      <button class="button button-secondary" type="button" data-action="calendar">
+        <i class="fa-solid fa-calendar-check"></i>
+        Ver agenda
+      </button>
     </section>
 
     <section class="section-block panel-card">
@@ -492,6 +660,18 @@ function renderDashboard() {
       </div>
       <div class="loan-list">
         ${metrics.dueSoon.length ? metrics.dueSoon.map(renderLoanCard).join("") : emptyState("Nenhum vencimento em aberto.")}
+      </div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-head">
+        <div>
+          <h3>Ranking inteligente</h3>
+          <p>Prioridades e oportunidades da carteira</p>
+        </div>
+      </div>
+      <div class="insight-grid">
+        ${insights.map(renderInsightCard).join("")}
       </div>
     </section>
 
@@ -541,12 +721,25 @@ function actionCard(title, text, icon, action) {
   `;
 }
 
+function renderInsightCard(item) {
+  return `
+    <article class="insight-card">
+      <span class="metric-icon ${item.tone}"><i class="fa-solid ${item.icon}"></i></span>
+      <div>
+        <span>${item.label}</span>
+        <strong>${escapeHtml(item.value)}</strong>
+        <small>${escapeHtml(item.detail)}</small>
+      </div>
+    </article>
+  `;
+}
+
 function legendRow(label, value, tone) {
   return `
     <div class="legend-row">
       <span class="dot ${tone}"></span>
       <span>${label}</span>
-      <strong>${formatCurrency(value)}</strong>
+      <strong>${typeof value === "number" ? formatCurrency(value) : escapeHtml(value)}</strong>
     </div>
   `;
 }
@@ -677,6 +870,19 @@ function renderLoanDetail(loan) {
         <p>Se permanecer aberto por mais 3 dias, o total estimado sera ${formatCurrency(lateProjection)}.</p>
       </div>
 
+      <div class="finance-strip">
+        ${miniStat("Lucro previsto", formatCurrency(loan.profitProjected), "green")}
+        ${miniStat("Lucro recebido", formatCurrency(loan.profitReceived), "blue")}
+        ${miniStat("Dias atraso", String(loan.lateDays), loan.lateDays ? "red" : "green")}
+      </div>
+
+      <section class="timeline-card">
+        <div class="section-head">
+          <h4>Historico e auditoria</h4>
+        </div>
+        ${renderLoanHistory(loan)}
+      </section>
+
       <div class="button-row">
         <button class="button button-primary" type="button" data-action="open-payment" data-loan-id="${loan.id}">
           <i class="fa-solid fa-circle-dollar-to-slot"></i>
@@ -690,6 +896,14 @@ function renderLoanDetail(loan) {
           <i class="fa-solid fa-pen"></i>
           Editar
         </button>
+        <button class="button button-ghost" type="button" data-action="print-contract" data-loan-id="${loan.id}">
+          <i class="fa-solid fa-file-signature"></i>
+          Contrato
+        </button>
+        <button class="button button-ghost" type="button" data-action="print-receipt" data-loan-id="${loan.id}">
+          <i class="fa-solid fa-receipt"></i>
+          Recibo
+        </button>
         <button class="button button-ghost" type="button" data-action="delete-loan" data-loan-id="${loan.id}">
           <i class="fa-solid fa-trash"></i>
           Excluir
@@ -697,6 +911,73 @@ function renderLoanDetail(loan) {
       </div>
     </section>
   `;
+}
+
+function miniStat(label, value, tone) {
+  return `
+    <div class="mini-stat ${tone}">
+      <span>${label}</span>
+      <strong>${value}</strong>
+    </div>
+  `;
+}
+
+function renderLoanHistory(loan) {
+  const events = [
+    {
+      date: loan.createdAt,
+      title: "Emprestimo criado",
+      text: formatCurrency(loan.principal),
+      tone: "green"
+    },
+    ...((loan.payments || []).map((payment) => ({
+      date: payment.paidAt,
+      title: "Pagamento recebido",
+      text: formatCurrency(payment.amount) + " via " + payment.method,
+      tone: "blue"
+    }))),
+    ...getAudit(loan.id).filter((entry) => entry.type !== "create").map((entry) => ({
+      date: entry.createdAt,
+      title: auditTitle(entry.type),
+      text: entry.message,
+      tone: entry.type === "delete" ? "red" : "yellow"
+    }))
+  ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8);
+
+  if (!events.length) {
+    return emptyState("Nenhum historico registrado.");
+  }
+
+  return `
+    <div class="audit-list">
+      ${events
+        .map(
+          (event) => `
+            <article class="audit-item">
+              <span class="dot ${event.tone}"></span>
+              <div>
+                <strong>${escapeHtml(event.title)}</strong>
+                <small>${formatDate(String(event.date).slice(0, 10))} - ${escapeHtml(event.text)}</small>
+              </div>
+            </article>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function auditTitle(type) {
+  const titles = {
+    create: "Cadastro",
+    edit: "Edicao",
+    payment: "Pagamento",
+    delete: "Exclusao",
+    import: "Importacao",
+    security: "Seguranca"
+  };
+
+  return titles[type] || "Registro";
 }
 
 function detailLine(label, value, className = "") {
@@ -908,8 +1189,10 @@ function saveLoanFromForm(event) {
 
   if (existing) {
     state.data.loans = state.data.loans.map((loan) => (loan.id === existing.id ? payload : loan));
+    addAudit("edit", "Emprestimo atualizado para " + payload.name + ".", payload.id);
   } else {
     state.data.loans.unshift(payload);
+    addAudit("create", "Emprestimo criado para " + payload.name + " no valor de " + formatCurrency(payload.principal) + ".", payload.id);
   }
 
   state.selectedLoanId = payload.id;
@@ -920,11 +1203,94 @@ function saveLoanFromForm(event) {
   setScreen("loans");
 }
 
+function renderCalendar() {
+  const loans = getLoans().filter((loan) => loan.status !== "paid");
+  const todayLoans = loans.filter((loan) => loan.status === "due-today");
+  const overdue = loans.filter((loan) => loan.status === "overdue");
+  const nextLoans = loans
+    .filter((loan) => loan.remainingDays > 0)
+    .sort((a, b) => a.remainingDays - b.remainingDays)
+    .slice(0, 12);
+
+  dom.screens.calendar.innerHTML = `
+    ${renderHeader("Agenda", "Vencimentos, atrasos e cobrancas do dia.", "dashboard")}
+
+    <section class="section-block calendar-hero">
+      <div class="calendar-day">
+        <span>${new Date().toLocaleDateString("pt-BR", { weekday: "short" })}</span>
+        <strong>${new Date().toLocaleDateString("pt-BR", { day: "2-digit" })}</strong>
+        <small>${new Date().toLocaleDateString("pt-BR", { month: "long" })}</small>
+      </div>
+      <div>
+        <span class="eyebrow">Agenda automatica</span>
+        <h2>${todayLoans.length ? `${todayLoans.length} vencendo hoje` : "Nenhum vencimento hoje"}</h2>
+        <p>${overdue.length ? `${overdue.length} operacao(oes) exigem cobranca.` : "Sem atrasos pendentes agora."}</p>
+      </div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-head">
+        <h3>Atrasados</h3>
+        <button class="link-button" type="button" data-action="filter-overdue">Cobrar</button>
+      </div>
+      <div class="loan-list">
+        ${overdue.length ? overdue.map(renderAgendaItem).join("") : emptyState("Nenhum atraso na agenda.")}
+      </div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-head">
+        <h3>Vencendo hoje</h3>
+      </div>
+      <div class="loan-list">
+        ${todayLoans.length ? todayLoans.map(renderAgendaItem).join("") : emptyState("Nenhum vencimento para hoje.")}
+      </div>
+    </section>
+
+    <section class="section-block">
+      <div class="section-head">
+        <h3>Proximos 30 dias</h3>
+      </div>
+      <div class="timeline-list">
+        ${nextLoans.length ? nextLoans.map(renderAgendaItem).join("") : emptyState("Sem proximos vencimentos cadastrados.")}
+      </div>
+    </section>
+  `;
+}
+
+function renderAgendaItem(loan) {
+  const meta = statusMeta(loan);
+  return `
+    <article class="agenda-item">
+      <span class="agenda-date status-${meta.tone}">
+        <strong>${loan.status === "overdue" ? loan.lateDays : Math.max(loan.remainingDays, 0)}</strong>
+        <small>${loan.status === "overdue" ? "dias atraso" : "dias"}</small>
+      </span>
+      <div>
+        <strong>${escapeHtml(loan.name)}</strong>
+        <span>${meta.detail} - ${formatDate(loan.dueDate)}</span>
+      </div>
+      <button class="icon-button" type="button" data-action="open-loan-menu" data-loan-id="${loan.id}" aria-label="Acoes">
+        <i class="fa-solid fa-ellipsis"></i>
+      </button>
+    </article>
+  `;
+}
+
 function renderReports() {
   const metrics = getMetrics();
+  const periodStats = getPeriodStats();
 
   dom.screens.reports.innerHTML = `
     ${renderHeader("Relatorios", "Lucro, recebimentos, atrasos e evolucao mensal.", "dashboard")}
+
+    <div class="period-pills" role="tablist" aria-label="Periodo do relatorio">
+      ${periodButton("today", "Hoje")}
+      ${periodButton("week", "7 dias")}
+      ${periodButton("month", "Mes")}
+      ${periodButton("year", "Ano")}
+      ${periodButton("all", "Tudo")}
+    </div>
 
     <section class="section-block">
       <div class="metric-grid">
@@ -934,6 +1300,8 @@ function renderReports() {
         ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.lateRate}% da carteira`, "red", "fa-triangle-exclamation", "reports")}
         ${metricCard("Lucro projetado", metrics.profitProjected, "Juros contratados", "green", "fa-chart-pie", "reports")}
         ${metricCard("Lucro recebido", metrics.profitReceived, "Realizado", "green", "fa-chart-line", "reports")}
+        ${metricCard("Recebido periodo", periodStats.received, `${periodStats.count} pagamento(s)`, "green", "fa-calendar-check", "reports")}
+        ${metricCard("Ticket medio", periodStats.averageTicket, "Media recebida", "yellow", "fa-receipt", "reports")}
       </div>
     </section>
 
@@ -959,6 +1327,14 @@ function renderReports() {
   `;
 }
 
+function periodButton(period, label) {
+  return `
+    <button class="period-button ${state.reportPeriod === period ? "is-active" : ""}" type="button" data-action="set-report-period" data-period="${period}">
+      ${label}
+    </button>
+  `;
+}
+
 function renderSettings() {
   dom.screens.settings.innerHTML = `
     ${renderHeader("Configuracoes", "Padroes, backup e seguranca.", "dashboard")}
@@ -974,26 +1350,106 @@ function renderSettings() {
           <input type="number" name="defaultDailyLateRate" min="0" step="0.01" value="${state.settings.defaultDailyLateRate}" />
         </label>
       </div>
+      <section class="settings-security">
+        <label class="switch-row">
+          <span>
+            <strong>Protecao por PIN</strong>
+            <small>${state.settings.pinEnabled ? "Ativa neste navegador" : "Desativada"}</small>
+          </span>
+          <input type="checkbox" name="pinEnabled" ${state.settings.pinEnabled ? "checked" : ""} />
+        </label>
+        <label class="field">
+          <span>${state.settings.pinEnabled ? "Alterar PIN" : "Criar PIN"}</span>
+          <input type="password" name="pin" inputmode="numeric" minlength="4" placeholder="Minimo 4 digitos" />
+        </label>
+      </section>
       <button class="button button-primary" type="submit">
         <i class="fa-solid fa-floppy-disk"></i>
-        Salvar padroes
+        Salvar configuracoes
       </button>
     </form>
 
     <section class="section-block">
       <div class="action-grid">
         ${actionCard("Exportar backup", "Baixar JSON com a carteira atual", "fa-download", "export")}
+        ${actionCard("Exportar CSV", "Planilha simples para conferencia externa", "fa-file-csv", "export-csv")}
         ${actionCard("Importar backup", "Restaurar arquivo JSON", "fa-upload", "import")}
         ${actionCard("Limpar dados", "Apagar todos os emprestimos salvos", "fa-trash", "clear-data")}
-        ${actionCard("Protecao por PIN", "Base preparada para ativacao futura", "fa-lock", "pin-info")}
+        ${actionCard("Bloquear agora", "Exigir PIN imediatamente", "fa-lock", "lock-app")}
       </div>
       <input class="hidden" type="file" id="import-file" accept="application/json" />
+    </section>
+
+    <section class="section-block panel-card">
+      <div class="section-head">
+        <div>
+          <h3>Seguranca dos dados</h3>
+          <p>O app continua local e privado. Use backup JSON para trocar de aparelho.</p>
+        </div>
+      </div>
+      <div class="status-list">
+        ${legendRow("Base local", "localStorage ativo", "blue")}
+        ${legendRow("PIN", state.settings.pinEnabled ? "Ativo" : "Desativado", state.settings.pinEnabled ? "green" : "yellow")}
+        ${legendRow("Auditoria", `${getAudit().length} registro(s)`, "green")}
+      </div>
     </section>
   `;
 
   const settingsForm = document.querySelector("#settings-form");
   settingsForm.addEventListener("submit", saveSettingsFromForm);
   document.querySelector("#import-file").addEventListener("change", importBackup);
+}
+
+function renderDrawer() {
+  const metrics = getMetrics();
+  dom.drawerPanel.innerHTML = `
+    <header class="drawer-header">
+      <div class="loading-logo">
+        <i class="fa-solid fa-chart-line"></i>
+      </div>
+      <div>
+        <strong>TSDBControol</strong>
+        <span>Carteira premium</span>
+      </div>
+      <button class="icon-button" type="button" data-action="close-drawer" aria-label="Fechar menu">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </header>
+
+    <section class="drawer-balance">
+      <span>Saldo aberto</span>
+      <strong>${formatCurrency(metrics.totalReceivable)}</strong>
+      <small>${metrics.active.length} operacao(oes) ativa(s)</small>
+    </section>
+
+    <nav class="drawer-nav" aria-label="Opcoes do aplicativo">
+      ${drawerButton("dashboard", "Inicio", "Painel principal", "fa-house")}
+      ${drawerButton("new-loan", "Novo emprestimo", "Cadastro rapido", "fa-plus")}
+      ${drawerButton("loans", "Emprestimos", "Busca, filtros e detalhes", "fa-wallet")}
+      ${drawerButton("calendar", "Agenda", "Vencimentos e atrasos", "fa-calendar-days")}
+      ${drawerButton("reports", "Relatorios", "Graficos e indicadores", "fa-chart-column")}
+      ${drawerButton("settings", "Configuracoes", "Padroes, PIN e backup", "fa-gear")}
+    </nav>
+
+    <section class="drawer-tools">
+      ${drawerButton("export", "Backup JSON", "Exportar dados", "fa-download")}
+      ${drawerButton("export-csv", "Exportar CSV", "Baixar planilha", "fa-file-csv")}
+      ${drawerButton("import", "Importar JSON", "Restaurar backup", "fa-upload")}
+      ${drawerButton("lock-app", "Bloquear", state.settings.pinEnabled ? "Exigir PIN" : "Ative o PIN nos ajustes", "fa-lock")}
+    </section>
+  `;
+}
+
+function drawerButton(action, title, text, icon) {
+  return `
+    <button class="drawer-item" type="button" data-action="${action}">
+      <i class="fa-solid ${icon}"></i>
+      <span>
+        <strong>${title}</strong>
+        <small>${text}</small>
+      </span>
+    </button>
+  `;
 }
 
 function renderRecentPayments() {
@@ -1053,11 +1509,31 @@ function openLoanMenu(loanId) {
     </button>
     <button class="button button-secondary" type="button" data-action="whatsapp" data-loan-id="${loan.id}">
       <i class="fa-brands fa-whatsapp"></i>
-      Cobrar no WhatsApp
+      Cobrar padrao
+    </button>
+    <button class="button button-secondary" type="button" data-action="whatsapp-template" data-template="friendly" data-loan-id="${loan.id}">
+      <i class="fa-regular fa-comment-dots"></i>
+      Lembrete educado
+    </button>
+    <button class="button button-secondary" type="button" data-action="whatsapp-template" data-template="firm" data-loan-id="${loan.id}">
+      <i class="fa-solid fa-bolt"></i>
+      Cobranca firme
+    </button>
+    <button class="button button-secondary" type="button" data-action="whatsapp-template" data-template="late" data-loan-id="${loan.id}">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      Aviso de atraso
     </button>
     <button class="button button-ghost" type="button" data-action="edit-loan" data-loan-id="${loan.id}">
       <i class="fa-solid fa-pen"></i>
       Editar
+    </button>
+    <button class="button button-ghost" type="button" data-action="print-contract" data-loan-id="${loan.id}">
+      <i class="fa-solid fa-file-signature"></i>
+      Gerar contrato
+    </button>
+    <button class="button button-ghost" type="button" data-action="print-receipt" data-loan-id="${loan.id}">
+      <i class="fa-solid fa-receipt"></i>
+      Gerar recibo
     </button>
     <button class="button button-danger" type="button" data-action="delete-loan" data-loan-id="${loan.id}">
       <i class="fa-solid fa-trash"></i>
@@ -1112,6 +1588,7 @@ function submitPayment(event) {
     };
   });
 
+  addAudit("payment", "Pagamento registrado no valor de " + formatCurrency(payment.amount) + ".", loanId);
   saveData();
   closeModal("payment-modal");
   closeModal("loan-menu-modal");
@@ -1143,6 +1620,7 @@ function deleteLoan(loanId) {
     return;
   }
 
+  addAudit("delete", "Emprestimo excluido: " + loan.name + ".", loanId);
   state.data.loans = state.data.loans.filter((item) => item.id !== loanId);
   if (state.selectedLoanId === loanId) {
     state.selectedLoanId = null;
@@ -1152,7 +1630,7 @@ function deleteLoan(loanId) {
   render();
 }
 
-function whatsappLink(loan) {
+function whatsappLink(loan, template = "default") {
   const digits = String(loan.phone || "").replace(/\D/g, "");
 
   if (!digits) {
@@ -1160,26 +1638,55 @@ function whatsappLink(loan) {
   }
 
   const phone = digits.startsWith("55") ? digits : "55" + digits;
-  const message =
-    "Ol\u00e1 " +
-    loan.name +
-    ", tudo bem? Estou passando para lembrar sobre o empr\u00e9stimo com vencimento em " +
-    formatDate(loan.dueDate) +
-    ". O valor atualizado at\u00e9 hoje \u00e9 " +
-    formatCurrency(loan.balance || loan.totalUpdated) +
-    ".";
+  const value = formatCurrency(loan.balance || loan.totalUpdated);
+  const dueDate = formatDate(loan.dueDate);
+  const messages = {
+    default:
+      "Ol\u00e1 " +
+      loan.name +
+      ", tudo bem? Estou passando para lembrar sobre o empr\u00e9stimo com vencimento em " +
+      dueDate +
+      ". O valor atualizado at\u00e9 hoje \u00e9 " +
+      value +
+      ".",
+    friendly:
+      "Ol\u00e1 " +
+      loan.name +
+      ", tudo bem? Passando so para lembrar com antecedencia do nosso combinado. Vencimento: " +
+      dueDate +
+      ". Valor atualizado: " +
+      value +
+      ".",
+    firm:
+      "Ol\u00e1 " +
+      loan.name +
+      ". Preciso alinhar a regularizacao do emprestimo com vencimento em " +
+      dueDate +
+      ". Valor atualizado ate hoje: " +
+      value +
+      ". Fico no aguardo do retorno.",
+    late:
+      "Ol\u00e1 " +
+      loan.name +
+      ". O emprestimo esta em atraso ha " +
+      loan.lateDays +
+      " dia(s). O valor atualizado ate hoje e " +
+      value +
+      ". Por favor, me envie uma previsao de pagamento."
+  };
+  const message = messages[template] || messages.default;
 
   return "https://wa.me/" + phone + "?text=" + encodeURIComponent(message);
 }
 
-function openWhatsapp(loanId) {
+function openWhatsapp(loanId, template = "default") {
   const loan = getLoan(loanId);
 
   if (!loan) {
     return;
   }
 
-  const link = whatsappLink(loan);
+  const link = whatsappLink(loan, template);
 
   if (!link) {
     alert("Cadastre um telefone para este cliente antes de cobrar pelo WhatsApp.");
@@ -1189,14 +1696,213 @@ function openWhatsapp(loanId) {
   window.open(link, "_blank", "noopener,noreferrer");
 }
 
-function saveSettingsFromForm(event) {
+function printLoanDocument(loanId, type) {
+  const loan = getLoan(loanId);
+
+  if (!loan) {
+    return;
+  }
+
+  const latestPayment = (loan.payments || []).slice().sort((a, b) => parseDate(b.paidAt) - parseDate(a.paidAt))[0];
+
+  if (type === "receipt" && !latestPayment) {
+    alert("Registre um pagamento antes de gerar recibo.");
+    return;
+  }
+
+  const title = type === "receipt" ? "Recibo de pagamento" : "Termo de emprestimo";
+  const body =
+    type === "receipt"
+      ? `
+        <p>Recebi de <strong>${escapeHtml(loan.name)}</strong> o valor de <strong>${formatCurrency(latestPayment.amount)}</strong> referente ao emprestimo com vencimento em <strong>${formatDate(loan.dueDate)}</strong>.</p>
+        <p>Data do pagamento: <strong>${formatDate(latestPayment.paidAt)}</strong></p>
+        <p>Metodo: <strong>${escapeHtml(latestPayment.method || "Nao informado")}</strong></p>
+        <p>Saldo atualizado apos registros: <strong>${formatCurrency(loan.balance)}</strong></p>
+      `
+      : `
+        <p>Cliente: <strong>${escapeHtml(loan.name)}</strong></p>
+        <p>Telefone: <strong>${escapeHtml(loan.phone || "Nao informado")}</strong></p>
+        <p>Valor emprestado: <strong>${formatCurrency(loan.principal)}</strong></p>
+        <p>Juros contratado: <strong>${formatPercent(loan.interestRate)}</strong></p>
+        <p>Total original: <strong>${formatCurrency(loan.totalOriginal)}</strong></p>
+        <p>Data do emprestimo: <strong>${formatDate(loan.issueDate)}</strong></p>
+        <p>Data de vencimento: <strong>${formatDate(loan.dueDate)}</strong></p>
+        <p>Juros por atraso: <strong>${formatPercent(loan.dailyLateRate)} ao dia</strong></p>
+        <p>Observacoes: ${escapeHtml(loan.notes || "Sem observacoes.")}</p>
+      `;
+
+  const win = window.open("", "_blank");
+  if (!win) {
+    alert("Permita pop-ups para gerar o documento.");
+    return;
+  }
+
+  win.document.write(`
+    <!doctype html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8" />
+        <title>${title}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 36px; color: #101820; line-height: 1.55; }
+          .doc { max-width: 760px; margin: 0 auto; border: 1px solid #d8dee8; border-radius: 18px; padding: 28px; }
+          h1 { margin: 0 0 8px; }
+          .muted { color: #637083; margin-bottom: 28px; }
+          .sign { margin-top: 56px; display: grid; gap: 26px; }
+          .line { border-top: 1px solid #101820; padding-top: 8px; text-align: center; }
+        </style>
+      </head>
+      <body>
+        <main class="doc">
+          <h1>${title}</h1>
+          <p class="muted">Documento gerado pelo TSDBControol em ${formatDate(todayIso())}.</p>
+          ${body}
+          <section class="sign">
+            <div class="line">Credor</div>
+            <div class="line">${escapeHtml(loan.name)}</div>
+          </section>
+        </main>
+        <script>window.onload = () => setTimeout(() => window.print(), 250);</script>
+      </body>
+    </html>
+  `);
+  win.document.close();
+  addAudit(type === "receipt" ? "payment" : "info", title + " gerado para " + loan.name + ".", loan.id);
+  saveData();
+}
+
+function exportCsv() {
+  const headers = [
+    "nome",
+    "telefone",
+    "valor_emprestado",
+    "juros_percentual",
+    "total_original",
+    "multa_atraso",
+    "total_atualizado",
+    "saldo_aberto",
+    "valor_pago",
+    "status",
+    "data_emprestimo",
+    "vencimento"
+  ];
+  const rows = getLoans().map((loan) => [
+    loan.name,
+    loan.phone,
+    loan.principal,
+    loan.interestRate,
+    loan.totalOriginal,
+    loan.lateInterest,
+    loan.totalUpdated,
+    loan.balance,
+    loan.paidAmount,
+    statusMeta(loan).label,
+    loan.issueDate,
+    loan.dueDate
+  ]);
+  const csv = [headers, ...rows]
+    .map((row) => row.map((cell) => `"${String(cell ?? "").replace(/"/g, '""')}"`).join(";"))
+    .join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = "tsdb-carteira-" + todayIso() + ".csv";
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+async function hashPin(pin) {
+  const value = String(pin || "");
+  if (window.crypto && window.crypto.subtle) {
+    const buffer = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+    return Array.from(new Uint8Array(buffer))
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index);
+    hash |= 0;
+  }
+  return "fallback-" + hash;
+}
+
+function lockApp() {
+  if (!state.settings.pinEnabled || !state.settings.pinHash) {
+    alert("Ative e salve um PIN nas configuracoes antes de bloquear.");
+    return;
+  }
+
+  dom.pinModal.classList.add("is-open");
+  dom.pinModal.setAttribute("aria-hidden", "false");
+  dom.pinInput.value = "";
+  dom.pinError.textContent = "";
+  setTimeout(() => dom.pinInput.focus(), 80);
+}
+
+async function unlockApp(event) {
+  event.preventDefault();
+  const pin = new FormData(event.currentTarget).get("pin");
+  const hash = await hashPin(pin);
+
+  if (hash !== state.settings.pinHash) {
+    dom.pinError.textContent = "PIN incorreto. Tente novamente.";
+    return;
+  }
+
+  dom.pinModal.classList.remove("is-open");
+  dom.pinModal.setAttribute("aria-hidden", "true");
+  dom.pinInput.value = "";
+  dom.pinError.textContent = "";
+}
+
+function openDrawer() {
+  renderDrawer();
+  dom.drawer.classList.add("is-open");
+  dom.drawer.setAttribute("aria-hidden", "false");
+}
+
+function closeDrawer() {
+  dom.drawer.classList.remove("is-open");
+  dom.drawer.setAttribute("aria-hidden", "true");
+}
+
+async function saveSettingsFromForm(event) {
   event.preventDefault();
   const data = new FormData(event.currentTarget);
   state.settings.defaultInterestRate = parseNumber(data.get("defaultInterestRate"));
   state.settings.defaultDailyLateRate = parseNumber(data.get("defaultDailyLateRate"));
+  const wantsPin = data.get("pinEnabled") === "on";
+  const wasPinEnabled = Boolean(state.settings.pinEnabled);
+  const pin = String(data.get("pin") || "").trim();
+
+  if (wantsPin && !state.settings.pinHash && pin.length < 4) {
+    alert("Informe um PIN com pelo menos 4 digitos para ativar a protecao.");
+    return;
+  }
+
+  if (pin) {
+    if (pin.length < 4) {
+      alert("O PIN precisa ter pelo menos 4 digitos.");
+      return;
+    }
+    state.settings.pinHash = await hashPin(pin);
+    addAudit("security", "PIN de acesso atualizado.");
+  }
+
+  state.settings.pinEnabled = wantsPin;
+  if (!wantsPin) {
+    state.settings.pinHash = "";
+    if (wasPinEnabled) {
+      addAudit("security", "PIN de acesso desativado.");
+    }
+  }
   saveSettings();
+  saveData();
   render();
-  alert("Padroes salvos.");
+  alert("Configuracoes salvas.");
 }
 
 function exportBackup() {
@@ -1230,6 +1936,7 @@ function importBackup(event) {
 
       state.data = normalizeData(nextData);
       state.settings = { ...defaultSettings, ...(payload.settings || state.settings) };
+      addAudit("import", "Backup JSON importado com sucesso.");
       state.selectedLoanId = null;
       state.draft = null;
       state.editingLoanId = null;
@@ -1246,7 +1953,8 @@ function clearData() {
     return;
   }
 
-  state.data = { loans: [] };
+  addAudit("delete", "Todos os dados foram limpos.");
+  state.data = { audit: [], loans: [] };
   state.selectedLoanId = null;
   state.draft = null;
   state.editingLoanId = null;
@@ -1422,11 +2130,13 @@ function bindEvents() {
     const action = trigger.dataset.action;
     const loanId = trigger.dataset.loanId;
 
-    if (["dashboard", "loans", "reports", "settings"].includes(action)) {
+    if (["dashboard", "loans", "calendar", "reports", "settings"].includes(action)) {
+      closeDrawer();
       setScreen(action);
     }
 
     if (action === "new-loan") {
+      closeDrawer();
       state.editingLoanId = null;
       state.draft = null;
       renderNewLoan();
@@ -1448,6 +2158,12 @@ function bindEvents() {
     if (action === "set-filter") {
       state.filter = trigger.dataset.filter;
       renderLoans();
+    }
+
+    if (action === "set-report-period") {
+      state.reportPeriod = trigger.dataset.period || "month";
+      renderReports();
+      setTimeout(renderCharts, 40);
     }
 
     if (action === "reset-filter") {
@@ -1481,8 +2197,28 @@ function bindEvents() {
       openWhatsapp(loanId);
     }
 
+    if (action === "whatsapp-template") {
+      openWhatsapp(loanId, trigger.dataset.template || "default");
+    }
+
+    if (action === "print-contract") {
+      printLoanDocument(loanId, "contract");
+    }
+
+    if (action === "print-receipt") {
+      printLoanDocument(loanId, "receipt");
+    }
+
     if (action === "close-modal") {
       closeModal(trigger.dataset.modal);
+    }
+
+    if (action === "open-drawer") {
+      openDrawer();
+    }
+
+    if (action === "close-drawer") {
+      closeDrawer();
     }
 
     if (action === "clear-draft") {
@@ -1494,10 +2230,17 @@ function bindEvents() {
     }
 
     if (action === "export") {
+      closeDrawer();
       exportBackup();
     }
 
+    if (action === "export-csv") {
+      closeDrawer();
+      exportCsv();
+    }
+
     if (action === "import") {
+      closeDrawer();
       document.querySelector("#import-file").click();
     }
 
@@ -1505,17 +2248,20 @@ function bindEvents() {
       clearData();
     }
 
-    if (action === "pin-info") {
-      alert("Protecao por PIN preparada para uma proxima versao.");
+    if (action === "lock-app") {
+      closeDrawer();
+      lockApp();
     }
   });
 
   dom.paymentForm.addEventListener("submit", submitPayment);
+  dom.pinForm.addEventListener("submit", unlockApp);
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeModal("payment-modal");
       closeModal("loan-menu-modal");
+      closeDrawer();
     }
   });
 }
@@ -1525,6 +2271,9 @@ function boot() {
   render();
   setScreen("dashboard");
   setTimeout(() => dom.loading.classList.add("is-hidden"), 600);
+  if (state.settings.pinEnabled && state.settings.pinHash) {
+    setTimeout(lockApp, 720);
+  }
   setInterval(() => render(), 60000);
 
   if ("serviceWorker" in navigator) {
