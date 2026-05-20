@@ -465,7 +465,8 @@ textarea {
 }
 
 .hero-panel,
-.calendar-hero {
+.calendar-hero,
+.wallet-panel {
   display: grid;
   gap: 14px;
   align-items: center;
@@ -481,14 +482,26 @@ textarea {
 .hero-panel h3,
 .hero-panel p,
 .calendar-hero h2,
-.calendar-hero p {
+.calendar-hero p,
+.wallet-panel h2,
+.wallet-panel p {
   margin: 0;
 }
 
 .hero-panel p,
-.calendar-hero p {
+.calendar-hero p,
+.wallet-panel p {
   color: var(--muted);
   line-height: 1.45;
+}
+
+.wallet-panel strong {
+  display: block;
+  margin: 4px 0 8px;
+  color: var(--gold-main);
+  font-size: clamp(1.85rem, 8vw, 2.45rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
 }
 
 .insight-grid {
@@ -1109,6 +1122,26 @@ textarea {
   background: rgba(244, 199, 93, 0.05);
 }
 
+.settings-group {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(244, 199, 93, 0.045);
+}
+
+.settings-group h3,
+.settings-group p {
+  margin: 0;
+}
+
+.settings-group p {
+  margin-top: 4px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
 .switch-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1286,15 +1319,51 @@ textarea {
   font-size: 1.35rem;
 }
 
-.drawer-nav,
-.drawer-tools {
+.drawer-groups,
+.drawer-group-body {
   display: grid;
   gap: 8px;
 }
 
-.drawer-tools {
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
+.drawer-group {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(244, 199, 93, 0.045);
+  overflow: hidden;
+}
+
+.drawer-group summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  padding: 13px;
+  color: var(--gold-main);
+  font-weight: 800;
+  list-style: none;
+  cursor: pointer;
+}
+
+.drawer-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.drawer-group summary span {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.drawer-group summary > i {
+  transition: transform 160ms ease;
+}
+
+.drawer-group[open] summary > i {
+  transform: rotate(180deg);
+}
+
+.drawer-group-body {
+  padding: 0 8px 8px;
 }
 
 .drawer-item {

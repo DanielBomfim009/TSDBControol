@@ -15,6 +15,7 @@ Aplicativo financeiro premium para controle pessoal de emprestimos, juros, atras
 ## Funcionalidades
 
 - Dashboard inicial com totais, lucro, clientes, vencimentos e atrasados.
+- Saldo disponível da carteira com atualização automatica por emprestimos e pagamentos.
 - Cadastro e edicao de emprestimos com calculo em tempo real.
 - Juros contratado automatico.
 - Juros diario por atraso automatico.

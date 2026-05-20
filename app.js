@@ -6,6 +6,7 @@ const DAY_MS = 86400000;
 const defaultSettings = {
   defaultInterestRate: 30,
   defaultDailyLateRate: 2,
+  walletAvailable: 0,
   pinEnabled: false,
   pinHash: ""
 };
@@ -371,9 +372,19 @@ function getMetrics() {
     totalOnTime: onTime.reduce((sum, loan) => sum + loan.balance, 0),
     profitProjected: loans.reduce((sum, loan) => sum + loan.profitProjected, 0),
     profitReceived: loans.reduce((sum, loan) => sum + loan.profitReceived, 0),
+    walletAvailable: getWalletAvailable(),
     clients: clientNames.size,
     lateRate: loans.length ? Math.round((overdue.length / loans.length) * 100) : 0
   };
+}
+
+function getWalletAvailable() {
+  return Math.max(parseNumber(state.settings.walletAvailable), 0);
+}
+
+function updateWalletAvailable(delta) {
+  state.settings.walletAvailable = Math.max(getWalletAvailable() + Number(delta || 0), 0);
+  saveSettings();
 }
 
 function addAudit(type, message, loanId = "") {
@@ -599,6 +610,19 @@ function renderDashboard() {
       `<button class="icon-button" type="button" data-action="loans" aria-label="Alertas"><i class="fa-regular fa-bell"></i></button>`
     )}
 
+    <section class="section-block wallet-panel">
+      <div>
+        <span class="eyebrow">Carteira</span>
+        <h2>Saldo disponível</h2>
+        <strong>${formatCurrency(metrics.walletAvailable)}</strong>
+        <p>Esse valor diminui ao cadastrar empréstimos e aumenta quando pagamentos são registrados.</p>
+      </div>
+      <button class="button button-secondary" type="button" data-action="settings">
+        <i class="fa-solid fa-pen-to-square"></i>
+        Ajustar saldo
+      </button>
+    </section>
+
     <section class="section-block">
       <div class="section-head">
         <div>
@@ -607,21 +631,18 @@ function renderDashboard() {
         </div>
       </div>
       <div class="metric-grid">
-        ${metricCard("Total emprestado", metrics.totalPrincipal, "Capital aplicado", "green", "fa-scale-balanced", "reports")}
-        ${metricCard("Total a receber", metrics.totalReceivable, "Saldo aberto", "blue", "fa-sack-dollar", "loans")}
-        ${metricCard("Em dia", metrics.totalOnTime, `${metrics.dueToday.length} vencendo hoje`, "yellow", "fa-clock", "filter-on-time")}
+        ${metricCard("Saldo disponível", metrics.walletAvailable, "Pronto para emprestar", "green", "fa-vault", "settings")}
+        ${metricCard("Emprestado", metrics.totalPrincipal, "Capital lançado", "blue", "fa-scale-balanced", "reports")}
+        ${metricCard("A receber", metrics.totalReceivable, "Saldo aberto", "blue", "fa-sack-dollar", "loans")}
         ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.overdue.length} operacao(oes)`, "red", "fa-triangle-exclamation", "filter-overdue")}
-        ${metricCard("Total pago", metrics.totalPaid, "Recebido", "green", "fa-circle-dollar-to-slot", "reports")}
-        ${metricCard("Lucro total", metrics.profitProjected, `${metrics.clients} cliente(s)`, "blue", "fa-chart-pie", "reports")}
       </div>
     </section>
 
     <section class="section-block">
       <div class="action-grid">
         ${actionCard("Novo emprestimo", "Cadastro com calculo em tempo real", "fa-plus", "new-loan")}
+        ${actionCard("Emprestimos", "Lista, detalhes e cobrancas", "fa-wallet", "loans")}
         ${actionCard("Agenda", "Calendario de vencimentos e cobrancas", "fa-calendar-days", "calendar")}
-        ${actionCard("Cobrar atrasados", "Abra a carteira filtrada por atraso", "fa-bolt", "filter-overdue")}
-        ${actionCard("Exportar backup", "Seguranca rapida dos seus dados", "fa-download", "export")}
       </div>
     </section>
 
@@ -1056,7 +1077,7 @@ function renderNewLoan() {
         <div class="preview-grid">
           ${previewItem("Juros", formatCurrency(preview.interestAmount), "interest")}
           ${previewItem("Total original", formatCurrency(preview.totalOriginal), "total")}
-          ${previewItem("Atraso 3 dias", formatCurrency(preview.lateProjection), "late")}
+          ${previewItem("Saldo apos cadastro", formatCurrency(preview.walletAfter), "wallet")}
           ${previewItem("Status previsto", preview.status, "status")}
         </div>
       </section>
@@ -1120,6 +1141,9 @@ function getPreview(draft) {
   const interest = principal * (parseNumber(draft.interestRate) / 100);
   const total = principal + interest;
   const lateProjection = total + total * (parseNumber(draft.dailyLateRate) / 100) * 3;
+  const existing = state.editingLoanId ? state.data.loans.find((loan) => loan.id === state.editingLoanId) : null;
+  const principalDelta = principal - (existing ? parseNumber(existing.principal) : 0);
+  const walletAfter = getWalletAvailable() - Math.max(principalDelta, 0) + Math.max(-principalDelta, 0);
   const dueDiff = draft.dueDate ? daysUntil(draft.dueDate) : 0;
   let status = "Em dia";
 
@@ -1135,6 +1159,7 @@ function getPreview(draft) {
     interestAmount: interest,
     totalOriginal: total,
     lateProjection,
+    walletAfter,
     status
   };
 }
@@ -1144,7 +1169,7 @@ function updatePreviewPanel() {
   const values = {
     interest: formatCurrency(preview.interestAmount),
     total: formatCurrency(preview.totalOriginal),
-    late: formatCurrency(preview.lateProjection),
+    wallet: formatCurrency(preview.walletAfter),
     status: preview.status
   };
 
@@ -1194,12 +1219,22 @@ function saveLoanFromForm(event) {
     return;
   }
 
+  const principalDelta = payload.principal - (existing ? parseNumber(existing.principal) : 0);
+  if (principalDelta > getWalletAvailable()) {
+    alert("Saldo disponível insuficiente para este empréstimo. Ajuste o saldo ou reduza o valor.");
+    return;
+  }
+
   if (existing) {
     state.data.loans = state.data.loans.map((loan) => (loan.id === existing.id ? payload : loan));
     addAudit("edit", "Emprestimo atualizado para " + payload.name + ".", payload.id);
   } else {
     state.data.loans.unshift(payload);
     addAudit("create", "Emprestimo criado para " + payload.name + " no valor de " + formatCurrency(payload.principal) + ".", payload.id);
+  }
+
+  if (principalDelta) {
+    updateWalletAvailable(-principalDelta);
   }
 
   state.selectedLoanId = payload.id;
@@ -1301,14 +1336,13 @@ function renderReports() {
 
     <section class="section-block">
       <div class="metric-grid">
+        ${metricCard("Saldo disponível", metrics.walletAvailable, "Carteira livre", "green", "fa-vault", "settings")}
         ${metricCard("Total emprestado", metrics.totalPrincipal, "Capital aplicado", "blue", "fa-money-bill-trend-up", "reports")}
         ${metricCard("A receber", metrics.totalReceivable, "Saldo aberto", "blue", "fa-sack-dollar", "reports")}
         ${metricCard("Recebido", metrics.totalPaid, "Pagamentos", "green", "fa-circle-dollar-to-slot", "reports")}
         ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.lateRate}% da carteira`, "red", "fa-triangle-exclamation", "reports")}
-        ${metricCard("Lucro projetado", metrics.profitProjected, "Juros contratados", "green", "fa-chart-pie", "reports")}
         ${metricCard("Lucro recebido", metrics.profitReceived, "Realizado", "green", "fa-chart-line", "reports")}
         ${metricCard("Recebido periodo", periodStats.received, `${periodStats.count} pagamento(s)`, "green", "fa-calendar-check", "reports")}
-        ${metricCard("Ticket medio", periodStats.averageTicket, "Media recebida", "yellow", "fa-receipt", "reports")}
       </div>
     </section>
 
@@ -1347,6 +1381,22 @@ function renderSettings() {
     ${renderHeader("Configuracoes", "Padroes, backup e seguranca.", "dashboard")}
 
     <form class="form-panel" id="settings-form">
+      <section class="settings-group">
+        <div>
+          <h3>Carteira</h3>
+          <p>Defina quanto existe disponivel para novos emprestimos.</p>
+        </div>
+        <label class="field">
+          <span>Saldo disponível</span>
+          <input type="text" name="walletAvailable" inputmode="decimal" data-money value="${formatMoneyInputValue(state.settings.walletAvailable)}" placeholder="0,00" />
+        </label>
+      </section>
+
+      <section class="settings-group">
+        <div>
+          <h3>Regras financeiras</h3>
+          <p>Padroes usados ao cadastrar novos emprestimos.</p>
+        </div>
       <div class="form-grid">
         <label class="field">
           <span>Juros padrao (%)</span>
@@ -1357,6 +1407,13 @@ function renderSettings() {
           <input type="number" name="defaultDailyLateRate" min="0" step="0.01" value="${state.settings.defaultDailyLateRate}" />
         </label>
       </div>
+      </section>
+
+      <section class="settings-group">
+        <div>
+          <h3>Seguranca</h3>
+          <p>Proteja o acesso local neste navegador.</p>
+        </div>
       <section class="settings-security">
         <label class="switch-row">
           <span>
@@ -1369,6 +1426,7 @@ function renderSettings() {
           <span>${state.settings.pinEnabled ? "Alterar PIN" : "Criar PIN"}</span>
           <input type="password" name="pin" inputmode="numeric" minlength="4" placeholder="Minimo 4 digitos" />
         </label>
+      </section>
       </section>
       <button class="button button-primary" type="submit">
         <i class="fa-solid fa-floppy-disk"></i>
@@ -1395,7 +1453,7 @@ function renderSettings() {
         </div>
       </div>
       <div class="status-list">
-        ${legendRow("Base local", "localStorage ativo", "blue")}
+        ${legendRow("Saldo disponível", state.settings.walletAvailable, "green")}
         ${legendRow("PIN", state.settings.pinEnabled ? "Ativo" : "Desativado", state.settings.pinEnabled ? "green" : "yellow")}
         ${legendRow("Auditoria", `${getAudit().length} registro(s)`, "green")}
       </div>
@@ -1424,26 +1482,43 @@ function renderDrawer() {
     </header>
 
     <section class="drawer-balance">
-      <span>Saldo aberto</span>
-      <strong>${formatCurrency(metrics.totalReceivable)}</strong>
+      <span>Saldo disponível</span>
+      <strong>${formatCurrency(metrics.walletAvailable)}</strong>
       <small>${metrics.active.length} operacao(oes) ativa(s)</small>
     </section>
 
-    <nav class="drawer-nav" aria-label="Opcoes do aplicativo">
-      ${drawerButton("dashboard", "Inicio", "Painel principal", "fa-house")}
-      ${drawerButton("new-loan", "Novo emprestimo", "Cadastro rapido", "fa-plus")}
-      ${drawerButton("loans", "Emprestimos", "Busca, filtros e detalhes", "fa-wallet")}
-      ${drawerButton("calendar", "Agenda", "Vencimentos e atrasos", "fa-calendar-days")}
-      ${drawerButton("reports", "Relatorios", "Graficos e indicadores", "fa-chart-column")}
-      ${drawerButton("settings", "Configuracoes", "Padroes, PIN e backup", "fa-gear")}
+    <nav class="drawer-groups" aria-label="Opcoes do aplicativo">
+      ${drawerGroup("Carteira", "fa-vault", true, [
+        drawerButton("dashboard", "Inicio", "Painel principal", "fa-house"),
+        drawerButton("settings", "Saldo disponível", "Ajustar carteira", "fa-coins"),
+        drawerButton("reports", "Relatorios", "Indicadores e lucro", "fa-chart-column")
+      ])}
+      ${drawerGroup("Operacoes", "fa-briefcase", false, [
+        drawerButton("new-loan", "Novo emprestimo", "Cadastrar operacao", "fa-plus"),
+        drawerButton("loans", "Emprestimos", "Lista e cobrancas", "fa-wallet"),
+        drawerButton("calendar", "Agenda", "Vencimentos", "fa-calendar-days")
+      ])}
+      ${drawerGroup("Dados e seguranca", "fa-shield-halved", false, [
+        drawerButton("export", "Backup JSON", "Exportar carteira", "fa-download"),
+        drawerButton("export-csv", "Exportar CSV", "Baixar planilha", "fa-file-csv"),
+        drawerButton("import", "Importar JSON", "Restaurar backup", "fa-upload"),
+        drawerButton("lock-app", "Bloquear", state.settings.pinEnabled ? "Exigir PIN" : "Ative o PIN nos ajustes", "fa-lock")
+      ])}
     </nav>
+  `;
+}
 
-    <section class="drawer-tools">
-      ${drawerButton("export", "Backup JSON", "Exportar dados", "fa-download")}
-      ${drawerButton("export-csv", "Exportar CSV", "Baixar planilha", "fa-file-csv")}
-      ${drawerButton("import", "Importar JSON", "Restaurar backup", "fa-upload")}
-      ${drawerButton("lock-app", "Bloquear", state.settings.pinEnabled ? "Exigir PIN" : "Ative o PIN nos ajustes", "fa-lock")}
-    </section>
+function drawerGroup(title, icon, open, items) {
+  return `
+    <details class="drawer-group" ${open ? "open" : ""}>
+      <summary>
+        <span><i class="fa-solid ${icon}"></i>${title}</span>
+        <i class="fa-solid fa-chevron-down"></i>
+      </summary>
+      <div class="drawer-group-body">
+        ${items.join("")}
+      </div>
+    </details>
   `;
 }
 
@@ -1596,6 +1671,7 @@ function submitPayment(event) {
   });
 
   addAudit("payment", "Pagamento registrado no valor de " + formatCurrency(payment.amount) + ".", loanId);
+  updateWalletAvailable(payment.amount);
   saveData();
   closeModal("payment-modal");
   closeModal("loan-menu-modal");
@@ -1628,6 +1704,7 @@ function deleteLoan(loanId) {
   }
 
   addAudit("delete", "Emprestimo excluido: " + loan.name + ".", loanId);
+  updateWalletAvailable(loan.principal - loan.paidAmount);
   state.data.loans = state.data.loans.filter((item) => item.id !== loanId);
   if (state.selectedLoanId === loanId) {
     state.selectedLoanId = null;
@@ -1879,6 +1956,7 @@ function closeDrawer() {
 async function saveSettingsFromForm(event) {
   event.preventDefault();
   const data = new FormData(event.currentTarget);
+  state.settings.walletAvailable = parseNumber(data.get("walletAvailable"));
   state.settings.defaultInterestRate = parseNumber(data.get("defaultInterestRate"));
   state.settings.defaultDailyLateRate = parseNumber(data.get("defaultDailyLateRate"));
   const wantsPin = data.get("pinEnabled") === "on";
