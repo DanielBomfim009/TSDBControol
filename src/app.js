@@ -7,25 +7,23 @@ const DAY = 86400000;
 
 const elements = {
   views: Array.from(document.querySelectorAll(".view")),
-  navLinks: Array.from(document.querySelectorAll(".nav-link")),
-  title: document.querySelector("#view-title"),
-  snapshot: document.querySelector("#snapshot"),
+  navLinks: Array.from(document.querySelectorAll(".mobile-nav__item")),
   dashboard: document.querySelector("#dashboard"),
-  clients: document.querySelector("#clientes"),
   loans: document.querySelector("#emprestimos"),
-  agenda: document.querySelector("#agenda"),
+  reports: document.querySelector("#relatorios"),
   settings: document.querySelector("#configuracoes"),
   loanClientSelect: document.querySelector("#loan-client-select"),
   paymentLoanSelect: document.querySelector("#payment-loan-select"),
-  clientModal: document.querySelector("#client-modal"),
-  loanModal: document.querySelector("#loan-modal"),
-  paymentModal: document.querySelector("#payment-modal"),
   clientForm: document.querySelector("#client-form"),
   loanForm: document.querySelector("#loan-form"),
   paymentForm: document.querySelector("#payment-form")
 };
 
 let state = loadState();
+let currentView = "dashboard";
+let selectedLoanId = state.loans[0] ? state.loans[0].id : null;
+let loanFilter = "todos";
+let loanSearch = "";
 
 function loadState() {
   const current = readStorage(STORAGE_KEY);
@@ -74,20 +72,6 @@ function differenceInDays(dateValue) {
   return Math.ceil((parseDate(dateValue) - getToday()) / DAY);
 }
 
-function formatRelativeDays(dateValue) {
-  const diff = differenceInDays(dateValue);
-
-  if (diff === 0) {
-    return "vence hoje";
-  }
-
-  if (diff > 0) {
-    return `vence em ${diff} dia(s)`;
-  }
-
-  return `${Math.abs(diff)} dia(s) em atraso`;
-}
-
 function getClientById(clientId) {
   return state.clients.find(function (client) {
     return client.id === clientId;
@@ -101,8 +85,8 @@ function getPaymentsByLoanId(loanId) {
 }
 
 function getBaseTarget(loan) {
-  const calculated = loan.principal * (1 + loan.rate / 100);
-  return loan.manualTarget === null || loan.manualTarget === undefined ? calculated : loan.manualTarget;
+  const calculated = Number(loan.principal) * (1 + Number(loan.rate) / 100);
+  return loan.manualTarget === null || loan.manualTarget === undefined ? calculated : Number(loan.manualTarget);
 }
 
 function getPaidAmount(loanId) {
@@ -121,7 +105,7 @@ function getCurrentTarget(loan) {
   const paid = getPaidAmount(loan.id);
   const lateDays = getLateDays(loan);
   const outstanding = Math.max(target - paid, 0);
-  const lateCharge = outstanding * (loan.lateFeeRate / 100) * lateDays;
+  const lateCharge = outstanding * (Number(loan.lateFeeRate) / 100) * lateDays;
 
   return target + lateCharge;
 }
@@ -130,18 +114,18 @@ function getLoanComputed(loan) {
   const client = getClientById(loan.clientId);
   const paidAmount = getPaidAmount(loan.id);
   const baseTarget = getBaseTarget(loan);
-  const lateDays = getLateDays(loan);
   const currentTarget = getCurrentTarget(loan);
+  const lateDays = getLateDays(loan);
   const remaining = Math.max(currentTarget - paidAmount, 0);
-  let status = "ativo";
+  let status = "em-dia";
 
   if (loan.status === "cancelado") {
     status = "cancelado";
   } else if (remaining === 0) {
-    status = "quitado";
+    status = "pago";
   } else if (lateDays > 0) {
     status = "atrasado";
-  } else if (differenceInDays(loan.dueDate) <= 3) {
+  } else if (differenceInDays(loan.dueDate) <= 7) {
     status = "vencendo";
   }
 
@@ -156,12 +140,12 @@ function getLoanComputed(loan) {
     lateFeeRate: Number(loan.lateFeeRate),
     manualTarget: loan.manualTarget,
     notes: loan.notes || "",
-    status: status,
     paidAmount: paidAmount,
     baseTarget: baseTarget,
     currentTarget: currentTarget,
     lateDays: lateDays,
     remaining: remaining,
+    status: status,
     profitExpected: baseTarget - Number(loan.principal),
     profitReceived: Math.max(Math.min(paidAmount, baseTarget) - Number(loan.principal), 0)
   };
@@ -175,6 +159,20 @@ function getComputedLoans() {
     });
 }
 
+function getSelectedLoan() {
+  const loans = getComputedLoans();
+  const current = loans.find(function (loan) {
+    return loan.id === selectedLoanId;
+  });
+
+  if (current) {
+    return current;
+  }
+
+  selectedLoanId = loans[0] ? loans[0].id : null;
+  return loans[0] || null;
+}
+
 function getMetrics() {
   const loans = getComputedLoans();
   const totalPrincipal = loans.reduce(function (sum, loan) {
@@ -183,414 +181,659 @@ function getMetrics() {
   const totalExpected = loans.reduce(function (sum, loan) {
     return sum + loan.baseTarget;
   }, 0);
+  const totalCurrent = loans.reduce(function (sum, loan) {
+    return sum + loan.currentTarget;
+  }, 0);
   const totalReceived = loans.reduce(function (sum, loan) {
     return sum + loan.paidAmount;
-  }, 0);
-  const profitExpected = loans.reduce(function (sum, loan) {
-    return sum + loan.profitExpected;
-  }, 0);
-  const profitReceived = loans.reduce(function (sum, loan) {
-    return sum + loan.profitReceived;
   }, 0);
   const overdueLoans = loans.filter(function (loan) {
     return loan.status === "atrasado";
   });
-  const dueToday = loans.filter(function (loan) {
-    return differenceInDays(loan.dueDate) === 0;
+  const openLoans = loans.filter(function (loan) {
+    return loan.remaining > 0 && loan.status !== "atrasado";
   });
-  const dueThisWeek = loans.filter(function (loan) {
-    const diff = differenceInDays(loan.dueDate);
-    return diff >= 0 && diff <= 7;
+  const paidLoans = loans.filter(function (loan) {
+    return loan.status === "pago";
   });
 
   return {
     totalPrincipal: totalPrincipal,
     totalExpected: totalExpected,
+    totalCurrent: totalCurrent,
     totalReceived: totalReceived,
-    profitExpected: profitExpected,
-    profitReceived: profitReceived,
+    profitExpected: loans.reduce(function (sum, loan) {
+      return sum + loan.profitExpected;
+    }, 0),
+    profitReceived: loans.reduce(function (sum, loan) {
+      return sum + loan.profitReceived;
+    }, 0),
     overdueAmount: overdueLoans.reduce(function (sum, loan) {
       return sum + loan.remaining;
     }, 0),
+    openAmount: openLoans.reduce(function (sum, loan) {
+      return sum + loan.remaining;
+    }, 0),
+    paidAmount: totalReceived,
     overdueCount: overdueLoans.length,
-    dueTodayCount: dueToday.length,
-    dueThisWeekCount: dueThisWeek.length,
+    dueSoonCount: loans.filter(function (loan) {
+      const diff = differenceInDays(loan.dueDate);
+      return diff >= 0 && diff <= 7 && loan.remaining > 0;
+    }).length,
     activeClients: state.clients.filter(function (client) {
       return client.status === "ativo";
     }).length,
-    activeLoans: loans.filter(function (loan) {
-      return loan.status === "ativo";
-    }).length
+    openLoansCount: openLoans.length,
+    paidLoansCount: paidLoans.length
   };
 }
 
-function statusPill(status) {
-  return `<span class="pill pill--${status}">${status}</span>`;
+function getGreetingName() {
+  return "Daniel";
 }
 
-function metricCard(title, value, caption, accent) {
-  const classes = accent ? "metric-card metric-card--accent" : "metric-card";
+function getInitials(name) {
+  return String(name || "")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(function (part) {
+      return part.charAt(0).toUpperCase();
+    })
+    .join("");
+}
+
+function getLoanStatusMeta(loan) {
+  if (loan.status === "pago") {
+    return {
+      label: `Pago em ${formatDate(getLastPaymentDate(loan.id) || loan.dueDate)}`,
+      textClass: "status-text--green",
+      indicatorClass: "status-indicator status-indicator--blue"
+    };
+  }
+
+  if (loan.status === "atrasado") {
+    return {
+      label: `Vencido ha ${loan.lateDays} dia(s)`,
+      textClass: "status-text--red",
+      indicatorClass: "status-indicator status-indicator--red"
+    };
+  }
+
+  const days = differenceInDays(loan.dueDate);
+  if (days === 0) {
+    return {
+      label: "Vence hoje",
+      textClass: "status-text--yellow",
+      indicatorClass: "status-indicator status-indicator--yellow"
+    };
+  }
+
+  return {
+    label: `Vence em ${Math.max(days, 0)} dia(s)`,
+    textClass: loan.status === "vencendo" ? "status-text--yellow" : "status-text--green",
+    indicatorClass: loan.status === "vencendo" ? "status-indicator status-indicator--yellow" : "status-indicator"
+  };
+}
+
+function getLastPaymentDate(loanId) {
+  const payments = getPaymentsByLoanId(loanId).sort(function (a, b) {
+    return parseDate(b.paidAt) - parseDate(a.paidAt);
+  });
+
+  return payments[0] ? payments[0].paidAt : null;
+}
+
+function getDonutBackground() {
+  const metrics = getMetrics();
+  const total = metrics.openAmount + metrics.overdueAmount + metrics.paidAmount;
+  const safeTotal = total || 1;
+  const greenShare = (metrics.openAmount / safeTotal) * 100;
+  const redShare = (metrics.overdueAmount / safeTotal) * 100;
+  const blueShare = 100 - greenShare - redShare;
+
+  return `conic-gradient(
+    var(--green) 0% ${greenShare}%,
+    var(--red) ${greenShare}% ${greenShare + redShare}%,
+    var(--blue) ${greenShare + redShare}% ${greenShare + redShare + blueShare}%,
+    rgba(255, 255, 255, 0.08) 100% 100%
+  )`;
+}
+
+function getLoanHistory(loan) {
+  const items = [
+    {
+      type: "created",
+      title: "Emprestimo criado",
+      subtitle: formatDate(loan.issuedAt),
+      amount: formatCurrency(loan.principal)
+    }
+  ];
+
+  getPaymentsByLoanId(loan.id)
+    .sort(function (a, b) {
+      return parseDate(a.paidAt) - parseDate(b.paidAt);
+    })
+    .forEach(function (payment) {
+      items.push({
+        type: "payment",
+        title: payment.method ? `Pagamento via ${payment.method}` : "Pagamento registrado",
+        subtitle: formatDate(payment.paidAt),
+        amount: formatCurrency(payment.amount)
+      });
+    });
+
+  if (loan.lateDays > 0) {
+    items.push({
+      type: "late",
+      title: "Atualizacao automatica",
+      subtitle: `Juros acumulados por ${loan.lateDays} dia(s)`,
+      amount: formatCurrency(loan.currentTarget - loan.baseTarget)
+    });
+  }
+
+  return items;
+}
+
+function getFilteredLoans() {
+  return getComputedLoans().filter(function (loan) {
+    const name = loan.client ? loan.client.name.toLowerCase() : "";
+    const searchOk = !loanSearch || name.includes(loanSearch.toLowerCase());
+
+    if (!searchOk) {
+      return false;
+    }
+
+    if (loanFilter === "todos") {
+      return true;
+    }
+
+    if (loanFilter === "em-dia") {
+      return loan.status === "em-dia" || loan.status === "vencendo";
+    }
+
+    if (loanFilter === "atrasados") {
+      return loan.status === "atrasado";
+    }
+
+    if (loanFilter === "pagos") {
+      return loan.status === "pago";
+    }
+
+    return true;
+  });
+}
+
+function getUpcomingLoans(limit) {
+  return getComputedLoans()
+    .filter(function (loan) {
+      return loan.remaining > 0;
+    })
+    .slice(0, limit);
+}
+
+function getMonthlyPaymentSeries() {
+  const payments = cloneData(state.payments).sort(function (a, b) {
+    return parseDate(a.paidAt) - parseDate(b.paidAt);
+  });
+
+  if (!payments.length) {
+    return [0, 0, 0, 0, 0, 0];
+  }
+
+  const buckets = {};
+  payments.forEach(function (payment) {
+    const day = String(parseDate(payment.paidAt).getDate()).padStart(2, "0");
+    buckets[day] = (buckets[day] || 0) + Number(payment.amount || 0);
+  });
+
+  const days = Object.keys(buckets).sort();
+  let running = 0;
+
+  return days.map(function (day) {
+    running += buckets[day];
+    return {
+      label: day,
+      value: running
+    };
+  });
+}
+
+function getChartMarkup() {
+  const series = getMonthlyPaymentSeries();
+  const normalizedSeries = series.length
+    ? series
+    : [
+        { label: "01", value: 0 },
+        { label: "08", value: 0 },
+        { label: "15", value: 0 },
+        { label: "22", value: 0 },
+        { label: "29", value: 0 }
+      ];
+
+  const width = 300;
+  const height = 160;
+  const maxValue = Math.max.apply(
+    null,
+    normalizedSeries.map(function (item) {
+      return item.value;
+    }).concat([1])
+  );
+
+  const points = normalizedSeries.map(function (item, index) {
+    const x = normalizedSeries.length === 1 ? width / 2 : (index / (normalizedSeries.length - 1)) * width;
+    const y = height - (item.value / maxValue) * (height - 20) - 10;
+    return { x: x, y: y };
+  });
+
+  const polyline = points
+    .map(function (point) {
+      return `${point.x},${point.y}`;
+    })
+    .join(" ");
+
+  const area = [
+    `M ${points[0].x} ${height}`,
+    `L ${points[0].x} ${points[0].y}`,
+    points
+      .slice(1)
+      .map(function (point) {
+        return `L ${point.x} ${point.y}`;
+      })
+      .join(" "),
+    `L ${points[points.length - 1].x} ${height}`,
+    "Z"
+  ].join(" ");
+
   return `
-    <article class="${classes}">
-      <span>${title}</span>
-      <strong>${value}</strong>
-      <small>${caption}</small>
-    </article>
+    <svg class="chart-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
+      <path class="area" d="${area}"></path>
+      <polyline class="line" points="${polyline}"></polyline>
+    </svg>
+    <div class="chart-axis">
+      ${normalizedSeries.map(function (item) {
+        return `<span>${item.label}</span>`;
+      }).join("")}
+    </div>
   `;
 }
 
-function renderSnapshot() {
-  const metrics = getMetrics();
-
-  elements.snapshot.innerHTML = `
-    <div class="snapshot__item">
-      <span class="detail">Lucro previsto</span>
-      <strong>${formatCurrency(metrics.profitExpected)}</strong>
-    </div>
-    <div class="snapshot__item">
-      <span class="detail">Recebido</span>
-      <strong>${formatCurrency(metrics.totalReceived)}</strong>
-    </div>
-    <div class="snapshot__item">
-      <span class="detail">Em atraso</span>
-      <strong>${metrics.overdueCount} cobranca(s)</strong>
-    </div>
+function renderHeader(config) {
+  return `
+    <header class="screen-header">
+      <div class="status-bar">
+        <strong>9:41</strong>
+        <div class="status-bar__icons">
+          <span class="status-dot"></span>
+          <span class="status-dot"></span>
+          <span class="status-dot"></span>
+        </div>
+      </div>
+      <div class="screen-header__row">
+        <button type="button" class="icon-shell">${config.leftIcon || "="}</button>
+        <div class="screen-header__title">
+          <h1>${config.title}</h1>
+          <p>${config.subtitle}</p>
+        </div>
+        <button type="button" class="icon-shell ${config.rightClass || ""}">${config.rightIcon || "+"}</button>
+      </div>
+    </header>
   `;
 }
 
 function renderDashboard() {
   const metrics = getMetrics();
-  const loans = getComputedLoans();
-  const overdueItems = loans.filter(function (loan) {
-    return loan.status === "atrasado";
-  }).slice(0, 3);
-  const dueSoonItems = loans.filter(function (loan) {
-    return loan.status === "ativo" || loan.status === "vencendo";
-  }).slice(0, 3);
-  const recentPayments = cloneData(state.payments)
-    .sort(function (a, b) {
-      return parseDate(b.paidAt) - parseDate(a.paidAt);
-    })
-    .slice(0, 5);
+  const upcomingLoans = getUpcomingLoans(4);
 
   elements.dashboard.innerHTML = `
-    <section class="hero">
-      <div class="hero__copy">
-        <div>
-          <p class="eyebrow">Visao geral</p>
-          <h3>Painel de cobranca com foco em rapidez, clareza e lucro real.</h3>
-        </div>
-        <p>
-          A base agora esta organizada para operar no dia a dia: cadastrar cliente, registrar emprestimo,
-          acompanhar atraso e enxergar o que entrou e o que ainda falta receber.
-        </p>
-        <div class="hero__stats">
-          <article class="mini-stat">
-            <span class="detail">Clientes ativos</span>
-            <strong>${metrics.activeClients}</strong>
-          </article>
-          <article class="mini-stat">
-            <span class="detail">Operacoes ativas</span>
-            <strong>${metrics.activeLoans}</strong>
-          </article>
-          <article class="mini-stat">
-            <span class="detail">Vencendo hoje</span>
-            <strong>${metrics.dueTodayCount}</strong>
-          </article>
-          <article class="mini-stat">
-            <span class="detail">Atrasos em aberto</span>
-            <strong>${metrics.overdueCount}</strong>
-          </article>
-        </div>
-      </div>
+    ${renderHeader({
+      leftIcon: "=",
+      title: `Ola, ${getGreetingName()}!`,
+      subtitle: "Aqui esta o resumo dos seus emprestimos",
+      rightIcon: "!",
+      rightClass: "notification"
+    })}
 
-      <div class="panel">
-        <p class="eyebrow">Radar semanal</p>
-        <h3>O que merece prioridade agora</h3>
-        <div class="timeline-list">
-          <div class="timeline-item">
+    <div class="screen-stack">
+      <section class="summary-card">
+        <div class="card-heading">
+          <div>
+            <h3>Resumo geral</h3>
+          </div>
+          <p>Atualizado hoje, 08:30</p>
+        </div>
+
+        <div class="stat-grid">
+          <article class="stat-tile">
+            <span class="stat-tile__icon stat-tile__icon--green">R$</span>
+            <span>Total emprestado</span>
+            <strong>${formatCurrency(metrics.totalPrincipal)}</strong>
+          </article>
+          <article class="stat-tile">
+            <span class="stat-tile__icon stat-tile__icon--blue">IN</span>
+            <span>A receber</span>
+            <strong>${formatCurrency(metrics.totalCurrent)}</strong>
+          </article>
+          <article class="stat-tile">
+            <span class="stat-tile__icon stat-tile__icon--yellow">OK</span>
+            <span>Em dia</span>
+            <strong>${formatCurrency(metrics.openAmount)}</strong>
+          </article>
+          <article class="stat-tile">
+            <span class="stat-tile__icon stat-tile__icon--red">AL</span>
+            <span>Atrasados</span>
             <strong>${formatCurrency(metrics.overdueAmount)}</strong>
-            <p>em cobrancas atrasadas exigindo acompanhamento.</p>
-          </div>
-          <div class="timeline-item">
-            <strong>${metrics.dueThisWeekCount} vencimento(s)</strong>
-            <p>programados para os proximos 7 dias.</p>
-          </div>
-          <div class="timeline-item">
-            <strong>${formatCurrency(metrics.profitReceived)}</strong>
-            <p>de lucro recebido ate aqui.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <div class="section-stack">
-      <section>
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Numeros-chave</p>
-            <h3>Resumo financeiro</h3>
-          </div>
-          <p>Leitura imediata da carteira para tomada de decisao.</p>
-        </div>
-        <div class="cards-grid">
-          ${metricCard("Total emprestado", formatCurrency(metrics.totalPrincipal), "Capital em operacao")}
-          ${metricCard("Total previsto", formatCurrency(metrics.totalExpected), "Valor combinado da carteira")}
-          ${metricCard("Total recebido", formatCurrency(metrics.totalReceived), "Entradas registradas")}
-          ${metricCard("Lucro previsto", formatCurrency(metrics.profitExpected), "Margem esperada", true)}
-          ${metricCard("Lucro recebido", formatCurrency(metrics.profitReceived), "Lucro consolidado", true)}
-          ${metricCard("Em atraso", formatCurrency(metrics.overdueAmount), `${metrics.overdueCount} cobranca(s)`)}
+          </article>
         </div>
       </section>
 
-      <section class="info-grid">
-        <div class="panel">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Atencao</p>
-              <h3>Cobrancas criticas</h3>
-            </div>
+      <section class="summary-card">
+        <div class="card-heading">
+          <div>
+            <h3>Visao geral</h3>
           </div>
-          ${renderLoanCards(overdueItems, "Sem cobrancas atrasadas no momento.")}
         </div>
 
-        <div class="panel">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Agenda</p>
-              <h3>Proximos vencimentos</h3>
+        <div class="overview-grid">
+          <div class="donut" style="background:${getDonutBackground()}">
+            <div class="donut__center">
+              <span>Total a receber</span>
+              <strong>${formatCurrency(metrics.totalCurrent)}</strong>
             </div>
           </div>
-          ${renderLoanCards(dueSoonItems, "Nenhum vencimento proximo cadastrado.")}
+
+          <div class="legend">
+            <div class="legend-row">
+              <span class="legend-swatch legend-swatch--green"></span>
+              <span>Em dia</span>
+              <strong>${formatCurrency(metrics.openAmount)}</strong>
+            </div>
+            <div class="legend-row">
+              <span class="legend-swatch legend-swatch--red"></span>
+              <span>Atrasados</span>
+              <strong>${formatCurrency(metrics.overdueAmount)}</strong>
+            </div>
+            <div class="legend-row">
+              <span class="legend-swatch legend-swatch--blue"></span>
+              <span>Pagos</span>
+              <strong>${formatCurrency(metrics.paidAmount)}</strong>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section class="panel">
-        <div class="section-heading">
+      <section class="loan-list-card">
+        <div class="card-heading">
           <div>
-            <p class="eyebrow">Movimento</p>
-            <h3>Ultimos recebimentos</h3>
+            <h3>Emprestimos proximos do vencimento</h3>
           </div>
-          <p>Historico recente para conferencia rapida.</p>
+          <button type="button" class="mini-link" data-view-target="emprestimos">Ver todos</button>
         </div>
-        ${renderPaymentCards(recentPayments)}
+        <div class="loan-list">
+          ${upcomingLoans.length ? upcomingLoans.map(renderCompactLoanRow).join("") : `<div class="empty-state"><p>Nenhum emprestimo cadastrado ainda.</p></div>`}
+        </div>
       </section>
     </div>
   `;
 }
 
-function renderClients() {
-  const loans = getComputedLoans();
-  const clientsMarkup = state.clients.map(function (client) {
-    const clientLoans = loans.filter(function (loan) {
-      return loan.clientId === client.id;
-    });
-    const openAmount = clientLoans.reduce(function (sum, loan) {
-      return sum + loan.remaining;
-    }, 0);
-    const nextLoan = clientLoans
-      .filter(function (loan) {
-        return loan.remaining > 0;
-      })
-      .sort(function (a, b) {
-        return parseDate(a.dueDate) - parseDate(b.dueDate);
-      })[0];
-
-    return `
-      <article class="record-card">
-        <div class="record-card__top">
-          <div>
-            <p class="eyebrow">Cliente</p>
-            <h4>${client.name}</h4>
-            <p>${client.phone || "Telefone nao informado"}</p>
-          </div>
-          ${statusPill(client.status)}
-        </div>
-        <div class="meta-grid">
-          <div class="meta-row">
-            <div>
-              <span>Saldo em aberto</span>
-              <strong>${formatCurrency(openAmount)}</strong>
-            </div>
-          </div>
-          <div class="meta-row">
-            <div>
-              <span>Proximo vencimento</span>
-              <strong>${nextLoan ? formatDate(nextLoan.dueDate) : "-"}</strong>
-            </div>
-          </div>
-          <div class="meta-row">
-            <div>
-              <span>Operacoes</span>
-              <strong>${clientLoans.length}</strong>
-            </div>
-          </div>
-        </div>
-        <div class="record-card__footer">
-          <span class="detail">${client.notes || "Sem observacoes adicionais."}</span>
-          <button type="button" class="inline-button" data-action="open-loan" data-client-id="${client.id}">
-            Novo emprestimo
-          </button>
-        </div>
-      </article>
-    `;
-  }).join("");
-
-  elements.clients.innerHTML = `
-    <div class="section-heading">
-      <div>
-        <p class="eyebrow">Clientes</p>
-        <h3>Carteira cadastrada</h3>
-      </div>
-      <p>Cards mais objetivos para consultar saldo, vencimento e observacoes sem depender de tabela.</p>
-    </div>
-    <div class="record-list">
-      ${clientsMarkup || `<div class="empty-state">Nenhum cliente cadastrado ainda.</div>`}
-    </div>
+function renderCompactLoanRow(loan) {
+  const status = getLoanStatusMeta(loan);
+  return `
+    <button type="button" class="loan-row loan-row--button" data-action="select-loan" data-loan-id="${loan.id}">
+      <span class="avatar">${getInitials(loan.client ? loan.client.name : "TS")}</span>
+      <span class="loan-row__content">
+        <h4>${loan.client ? loan.client.name : "Cliente nao encontrado"}</h4>
+        <p class="${status.textClass}">${status.label}</p>
+      </span>
+      <span class="loan-row__amount">
+        <strong>${formatCurrency(loan.remaining > 0 ? loan.remaining : loan.baseTarget)}</strong>
+        <span>${formatDate(loan.dueDate)}</span>
+      </span>
+      <span class="${status.indicatorClass}"></span>
+    </button>
   `;
 }
 
 function renderLoans() {
-  const loansMarkup = getComputedLoans().map(function (loan) {
-    return `
-      <article class="record-card">
-        <div class="record-card__top">
-          <div>
-            <p class="eyebrow">Operacao</p>
-            <h4>${loan.client ? loan.client.name : "Cliente nao encontrado"}</h4>
-            <p>Emitido em ${formatDate(loan.issuedAt)} e com vencimento em ${formatDate(loan.dueDate)}</p>
-          </div>
-          ${statusPill(loan.status)}
-        </div>
-        <div class="meta-grid">
-          <div class="meta-row">
-            <div>
-              <span>Principal</span>
-              <strong>${formatCurrency(loan.principal)}</strong>
-            </div>
-          </div>
-          <div class="meta-row">
-            <div>
-              <span>Total combinado</span>
-              <strong>${formatCurrency(loan.baseTarget)}</strong>
-            </div>
-          </div>
-          <div class="meta-row">
-            <div>
-              <span>Total atualizado</span>
-              <strong>${formatCurrency(loan.currentTarget)}</strong>
-            </div>
-          </div>
-          <div class="meta-row">
-            <div>
-              <span>Recebido</span>
-              <strong>${formatCurrency(loan.paidAmount)}</strong>
-            </div>
-          </div>
-        </div>
-        <div class="record-card__footer">
-          <span class="detail">
-            ${formatPercent(loan.rate)} combinado | juros diario ${formatPercent(loan.lateFeeRate)} | ${formatRelativeDays(loan.dueDate)}
-          </span>
-          <button type="button" class="inline-button" data-action="open-payment" data-loan-id="${loan.id}">
-            Registrar pagamento
-          </button>
-        </div>
-      </article>
-    `;
-  }).join("");
+  const filteredLoans = getFilteredLoans();
+  const selectedLoan = getSelectedLoan();
 
   elements.loans.innerHTML = `
-    <div class="section-heading">
-      <div>
-        <p class="eyebrow">Emprestimos</p>
-        <h3>Operacoes da carteira</h3>
+    ${renderHeader({
+      leftIcon: "<",
+      title: "Meus Emprestimos",
+      subtitle: "Controle sua carteira com filtros rapidos",
+      rightIcon: ":"
+    })}
+
+    <div class="toolbar">
+      <div class="tab-strip">
+        ${renderFilterTab("todos", "Todos")}
+        ${renderFilterTab("em-dia", "Em dia")}
+        ${renderFilterTab("atrasados", "Atrasados")}
+        ${renderFilterTab("pagos", "Pagos")}
       </div>
-      <p>Saindo da tabela simples para um formato mais legivel no celular e mais util no dia a dia.</p>
+
+      <label class="search-bar">
+        <span>Q</span>
+        <input type="search" value="${escapeAttribute(loanSearch)}" data-role="loan-search" placeholder="Buscar por nome..." />
+      </label>
     </div>
-    <div class="record-list">
-      ${loansMarkup || `<div class="empty-state">Nenhum emprestimo cadastrado ainda.</div>`}
+
+    <div class="screen-stack">
+      <section class="loan-list-card">
+        <div class="loan-list">
+          ${filteredLoans.length ? filteredLoans.map(renderExpandedLoanRow).join("") : `<div class="empty-state"><p>Nenhum emprestimo encontrado para este filtro.</p></div>`}
+        </div>
+      </section>
+
+      ${selectedLoan ? renderLoanDetail(selectedLoan) : `<section class="detail-card"><div class="empty-state"><p>Selecione um emprestimo para ver os detalhes.</p></div></section>`}
     </div>
   `;
 }
 
-function renderAgenda() {
-  const loans = getComputedLoans();
-  const overdue = loans.filter(function (loan) {
-    return loan.status === "atrasado";
-  });
-  const dueToday = loans.filter(function (loan) {
-    return differenceInDays(loan.dueDate) === 0;
-  });
-  const dueWeek = loans.filter(function (loan) {
-    const diff = differenceInDays(loan.dueDate);
-    return diff > 0 && diff <= 7;
-  });
+function renderFilterTab(value, label) {
+  return `
+    <button type="button" class="tab-button ${loanFilter === value ? "is-active" : ""}" data-action="set-loan-filter" data-filter="${value}">
+      ${label}
+    </button>
+  `;
+}
 
-  elements.agenda.innerHTML = `
-    <div class="section-heading">
-      <div>
-        <p class="eyebrow">Agenda</p>
-        <h3>Mapa de cobranca</h3>
+function renderExpandedLoanRow(loan) {
+  const status = getLoanStatusMeta(loan);
+  return `
+    <button type="button" class="loan-row loan-row--button" data-action="select-loan" data-loan-id="${loan.id}">
+      <span class="avatar">${getInitials(loan.client ? loan.client.name : "TS")}</span>
+      <span class="loan-row__content">
+        <h4>${loan.client ? loan.client.name : "Cliente nao encontrado"}</h4>
+        <p class="${status.textClass}">${status.label}</p>
+      </span>
+      <span class="loan-row__amount">
+        <strong>${formatCurrency(loan.remaining > 0 ? loan.remaining : loan.baseTarget)}</strong>
+        <span>${formatDate(loan.dueDate)}</span>
+      </span>
+      <span class="${status.indicatorClass}"></span>
+    </button>
+  `;
+}
+
+function renderLoanDetail(loan) {
+  const history = getLoanHistory(loan);
+  const latePreviewDays = loan.lateDays > 0 ? 3 : 3;
+  const latePreviewTotal = loan.remaining + loan.remaining * (loan.lateFeeRate / 100) * latePreviewDays;
+  const status = getLoanStatusMeta(loan);
+
+  return `
+    <section class="detail-card">
+      <div class="detail-hero">
+        <span class="avatar">${getInitials(loan.client ? loan.client.name : "TS")}</span>
+        <div>
+          <h3>${loan.client ? loan.client.name : "Cliente nao encontrado"}</h3>
+          <p class="${status.textClass}">${status.label}</p>
+        </div>
       </div>
-      <p>Separacao por urgencia para facilitar acompanhamento diario.</p>
-    </div>
-    <div class="lane-grid">
-      <section class="timeline-card">
-        <p class="eyebrow">Atrasados</p>
-        <h3>Cobrancas vencidas</h3>
-        ${renderTimeline(overdue, "Sem atrasos registrados.")}
-      </section>
-      <section class="timeline-card">
-        <p class="eyebrow">Hoje</p>
-        <h3>Vencimentos do dia</h3>
-        ${renderTimeline(dueToday, "Nenhum vencimento hoje.")}
-      </section>
-      <section class="timeline-card">
-        <p class="eyebrow">Semana</p>
-        <h3>Proximos 7 dias</h3>
-        ${renderTimeline(dueWeek, "Nenhum vencimento nesta semana.")}
+
+      <div class="metric-lines">
+        <div class="metric-line"><span>Valor emprestado</span><strong>${formatCurrency(loan.principal)}</strong></div>
+        <div class="metric-line"><span>Juros contratado</span><strong>${formatPercent(loan.rate)}</strong></div>
+        <div class="metric-line"><span>Valor dos juros</span><strong>${formatCurrency(loan.baseTarget - loan.principal)}</strong></div>
+        <div class="metric-line"><span>Total a receber</span><strong class="status-text--green">${formatCurrency(loan.currentTarget)}</strong></div>
+        <div class="metric-line"><span>Data do emprestimo</span><strong>${formatDate(loan.issuedAt)}</strong></div>
+        <div class="metric-line"><span>Data de vencimento</span><strong>${formatDate(loan.dueDate)}</strong></div>
+        <div class="metric-line"><span>Juros por atraso</span><strong>${formatPercent(loan.lateFeeRate)} ao dia</strong></div>
+      </div>
+
+      <div class="late-preview">
+        <h4>Se atrasar ${latePreviewDays} dias</h4>
+        <p>Acrescimo estimado de ${formatCurrency(loan.remaining * (loan.lateFeeRate / 100) * latePreviewDays)}</p>
+        <strong>Total: ${formatCurrency(latePreviewTotal)}</strong>
+      </div>
+
+      <div class="history-list">
+        <h3>Historico</h3>
+        ${history.map(renderHistoryItem).join("")}
+      </div>
+
+      <div class="detail-action">
+        <button type="button" class="button button--primary" data-action="open-payment" data-loan-id="${loan.id}">
+          Registrar pagamento
+        </button>
+      </div>
+    </section>
+  `;
+}
+
+function renderHistoryItem(item) {
+  const bulletClass = item.type === "payment" ? "history-bullet" : "history-bullet history-bullet--blue";
+  return `
+    <article class="history-item">
+      <span class="${bulletClass}"></span>
+      <div>
+        <h4>${item.subtitle}</h4>
+        <p>${item.title}</p>
+      </div>
+      <strong>${item.amount}</strong>
+    </article>
+  `;
+}
+
+function renderReports() {
+  const metrics = getMetrics();
+  const total = metrics.totalReceived || 1;
+  const healthyPct = Math.round((metrics.openAmount / (metrics.openAmount + metrics.overdueAmount || 1)) * 100);
+  const overduePct = 100 - healthyPct;
+
+  elements.reports.innerHTML = `
+    ${renderHeader({
+      leftIcon: "<",
+      title: "Relatorios",
+      subtitle: "Leitura financeira da carteira",
+      rightIcon: "."
+    })}
+
+    <div class="screen-stack">
+      <section class="report-card">
+        <div class="select-row">
+          <h3>Este mes</h3>
+          <div class="period-pill">Mensal</div>
+        </div>
+
+        <div class="report-total">
+          <p>Total a receber</p>
+          <strong>${formatCurrency(metrics.totalCurrent)}</strong>
+          <span>Lucro recebido ${formatCurrency(metrics.profitReceived)}</span>
+          <p>Comparativo visual do que entrou e do que segue em aberto.</p>
+        </div>
+
+        <div class="chart-card">
+          <h4>Evolucao dos recebimentos</h4>
+          <div class="chart-wrap">
+            ${getChartMarkup()}
+          </div>
+        </div>
+
+        <div class="summary-list">
+          <div class="summary-line">
+            <span class="legend-swatch legend-swatch--green"></span>
+            <span>Em dia</span>
+            <strong>${formatCurrency(metrics.openAmount)}</strong>
+            <small>${healthyPct}%</small>
+          </div>
+          <div class="summary-line">
+            <span class="legend-swatch legend-swatch--red"></span>
+            <span>Atrasados</span>
+            <strong>${formatCurrency(metrics.overdueAmount)}</strong>
+            <small>${overduePct}%</small>
+          </div>
+          <div class="summary-line">
+            <span class="legend-swatch legend-swatch--blue"></span>
+            <span>Pagos</span>
+            <strong>${formatCurrency(metrics.totalReceived)}</strong>
+            <small>${Math.round((metrics.totalReceived / total) * 100)}%</small>
+          </div>
+        </div>
       </section>
     </div>
   `;
 }
 
 function renderSettings() {
+  const recentClients = cloneData(state.clients).slice(0, 4);
+  const recentPayments = cloneData(state.payments)
+    .sort(function (a, b) {
+      return parseDate(b.paidAt) - parseDate(a.paidAt);
+    })
+    .slice(0, 4);
+
   elements.settings.innerHTML = `
-    <div class="section-heading">
-      <div>
-        <p class="eyebrow">Configuracoes</p>
-        <h3>Seguranca e manutencao</h3>
-      </div>
-      <p>Base pronta para backup manual e publicacao continua no GitHub Pages.</p>
-    </div>
+    ${renderHeader({
+      leftIcon: "<",
+      title: "Configuracoes",
+      subtitle: "Backup, clientes e manutencao",
+      rightIcon: "."
+    })}
 
     <div class="settings-grid">
-      <article class="settings-card">
-        <p class="eyebrow">Dados</p>
-        <h3>Exportar backup</h3>
-        <p>Baixe uma copia em JSON da sua base atual para guardar localmente.</p>
-        <div class="settings-row">
-          <button type="button" class="action-button" data-action="export-data">Exportar agora</button>
-          <span class="muted">Recomendado antes de grandes alteracoes.</span>
+      <section class="settings-card">
+        <h3>Base do aplicativo</h3>
+        <p>Seus dados ficam salvos localmente e podem ser exportados em JSON a qualquer momento.</p>
+        <div class="settings-actions">
+          <button type="button" class="button button--primary" data-action="export-data">Exportar backup</button>
+          <button type="button" class="button button--secondary" data-action="open-client">Novo cliente</button>
         </div>
-      </article>
+      </section>
 
-      <article class="settings-card">
-        <p class="eyebrow">Restauracao</p>
+      <section class="settings-card">
         <h3>Importar base</h3>
-        <p>Envie um arquivo JSON de backup para restaurar clientes, emprestimos e pagamentos.</p>
+        <p>Restaure um backup salvo anteriormente para recuperar clientes, emprestimos e pagamentos.</p>
         <input class="file-input" id="import-input" type="file" accept="application/json" />
-      </article>
+      </section>
 
-      <article class="settings-card">
-        <p class="eyebrow">Publicacao</p>
-        <h3>GitHub Pages</h3>
-        <p>A aplicacao segue estatica e pode continuar hospedada direto no repositório sem etapa de build.</p>
-        <div class="settings-row">
-          <span class="muted">Manifest e cache offline ja incluidos.</span>
+      <section class="settings-card">
+        <div class="card-heading">
+          <div>
+            <h3>Clientes recentes</h3>
+          </div>
+          <span>${state.clients.length} total</span>
         </div>
-      </article>
+        <div class="client-list">
+          ${recentClients.length ? recentClients.map(renderClientCard).join("") : `<div class="empty-state"><p>Nenhum cliente cadastrado ainda.</p></div>`}
+        </div>
+      </section>
+
+      <section class="settings-card">
+        <div class="card-heading">
+          <div>
+            <h3>Ultimos pagamentos</h3>
+          </div>
+          <span>${state.payments.length} total</span>
+        </div>
+        <div class="payment-list">
+          ${recentPayments.length ? recentPayments.map(renderPaymentCard).join("") : `<div class="empty-state"><p>Nenhum pagamento registrado ainda.</p></div>`}
+        </div>
+      </section>
     </div>
   `;
 
@@ -600,91 +843,48 @@ function renderSettings() {
   }
 }
 
-function renderLoanCards(loans, emptyMessage) {
-  if (!loans.length) {
-    return `<div class="empty-state">${emptyMessage}</div>`;
-  }
+function renderClientCard(client) {
+  const clientLoans = getComputedLoans().filter(function (loan) {
+    return loan.clientId === client.id;
+  });
+  const openAmount = clientLoans.reduce(function (sum, loan) {
+    return sum + loan.remaining;
+  }, 0);
 
   return `
-    <div class="record-list">
-      ${loans.map(function (loan) {
-        return `
-          <article class="record-card">
-            <div class="record-card__top">
-              <div>
-                <h4>${loan.client ? loan.client.name : "Cliente nao encontrado"}</h4>
-                <p>${formatRelativeDays(loan.dueDate)}</p>
-              </div>
-              ${statusPill(loan.status)}
-            </div>
-            <div class="meta-grid">
-              <div class="meta-row">
-                <div>
-                  <span>Saldo atual</span>
-                  <strong>${formatCurrency(loan.remaining)}</strong>
-                </div>
-              </div>
-              <div class="meta-row">
-                <div>
-                  <span>Vencimento</span>
-                  <strong>${formatDate(loan.dueDate)}</strong>
-                </div>
-              </div>
-            </div>
-          </article>
-        `;
-      }).join("")}
-    </div>
+    <article class="client-card">
+      <div class="client-card__top">
+        <div>
+          <h4>${client.name}</h4>
+          <p>${client.phone || "Telefone nao informado"}</p>
+        </div>
+        <span class="status-pill status-pill--${client.status}">${client.status}</span>
+      </div>
+      <div class="client-meta">
+        <div class="meta-pair"><span>Saldo em aberto</span><strong>${formatCurrency(openAmount)}</strong></div>
+        <div class="meta-pair"><span>Operacoes</span><strong>${clientLoans.length}</strong></div>
+      </div>
+    </article>
   `;
 }
 
-function renderPaymentCards(payments) {
-  if (!payments.length) {
-    return `<div class="empty-state">Nenhum pagamento registrado ainda.</div>`;
-  }
+function renderPaymentCard(payment) {
+  const loan = state.loans.find(function (item) {
+    return item.id === payment.loanId;
+  });
+  const client = loan ? getClientById(loan.clientId) : null;
 
   return `
-    <div class="record-list">
-      ${payments.map(function (payment) {
-        const loan = state.loans.find(function (item) {
-          return item.id === payment.loanId;
-        });
-        const client = loan ? getClientById(loan.clientId) : null;
-
-        return `
-          <article class="record-card">
-            <div class="record-card__top">
-              <div>
-                <p class="eyebrow">Recebimento</p>
-                <h4>${client ? client.name : "Cliente nao encontrado"}</h4>
-                <p>${formatDate(payment.paidAt)}${payment.method ? ` | ${payment.method}` : ""}</p>
-              </div>
-              <strong>${formatCurrency(payment.amount)}</strong>
-            </div>
-            <span class="detail">${payment.notes || "Sem observacoes para este pagamento."}</span>
-          </article>
-        `;
-      }).join("")}
-    </div>
-  `;
-}
-
-function renderTimeline(loans, emptyMessage) {
-  if (!loans.length) {
-    return `<div class="empty-state">${emptyMessage}</div>`;
-  }
-
-  return `
-    <div class="timeline-list">
-      ${loans.map(function (loan) {
-        return `
-          <div class="timeline-item">
-            <strong>${loan.client ? loan.client.name : "Cliente nao encontrado"}</strong>
-            <p>${formatCurrency(loan.remaining)} | ${formatRelativeDays(loan.dueDate)}</p>
-          </div>
-        `;
-      }).join("")}
-    </div>
+    <article class="payment-card">
+      <div class="payment-card__top">
+        <div>
+          <h4>${client ? client.name : "Cliente nao encontrado"}</h4>
+          <p>${formatDate(payment.paidAt)}${payment.method ? ` | ${payment.method}` : ""}</p>
+        </div>
+        <strong>${formatCurrency(payment.amount)}</strong>
+      </div>
+      <p>${payment.notes || "Sem observacoes para este pagamento."}</p>
+    </article>
   `;
 }
 
@@ -709,29 +909,27 @@ function renderSelectOptions() {
 }
 
 function renderAll() {
-  renderSnapshot();
   renderDashboard();
-  renderClients();
   renderLoans();
-  renderAgenda();
+  renderReports();
   renderSettings();
   renderSelectOptions();
+  updateNavState();
 }
 
-function switchView(viewId) {
+function updateNavState() {
   elements.views.forEach(function (view) {
-    view.classList.toggle("is-active", view.id === viewId);
+    view.classList.toggle("is-active", view.id === currentView);
   });
 
   elements.navLinks.forEach(function (link) {
-    link.classList.toggle("is-active", link.dataset.viewTarget === viewId);
+    link.classList.toggle("is-active", link.dataset.viewTarget === currentView);
   });
+}
 
-  const activeLink = elements.navLinks.find(function (link) {
-    return link.dataset.viewTarget === viewId;
-  });
-
-  elements.title.textContent = activeLink ? activeLink.querySelector("span").textContent : "Dashboard";
+function switchView(viewId) {
+  currentView = viewId;
+  updateNavState();
 }
 
 function createId(prefix) {
@@ -814,8 +1012,10 @@ function handleLoanSubmit(event) {
     status: "ativo"
   });
 
+  selectedLoanId = state.loans[0].id;
   persistState();
   renderAll();
+  switchView("emprestimos");
   resetForm(elements.loanForm);
   setDateDefaults();
   closeModal("loan-modal");
@@ -834,8 +1034,10 @@ function handlePaymentSubmit(event) {
     notes: String(formData.get("notes") || "").trim()
   });
 
+  selectedLoanId = String(formData.get("loanId"));
   persistState();
   renderAll();
+  switchView("emprestimos");
   resetForm(elements.paymentForm);
   setDateDefaults();
   closeModal("payment-modal");
@@ -861,12 +1063,21 @@ function handleImport(event) {
     .then(function (content) {
       const imported = JSON.parse(content);
       state = imported;
+      selectedLoanId = state.loans[0] ? state.loans[0].id : null;
       persistState();
       renderAll();
     })
     .catch(function () {
       window.alert("Nao foi possivel importar este arquivo JSON.");
     });
+}
+
+function escapeAttribute(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function bindEvents() {
@@ -877,8 +1088,13 @@ function bindEvents() {
   });
 
   document.body.addEventListener("click", function (event) {
-    const trigger = event.target.closest("[data-action]");
+    const trigger = event.target.closest("[data-action], [data-view-target]");
     if (!trigger) {
+      return;
+    }
+
+    if (trigger.dataset.viewTarget && !trigger.dataset.action) {
+      switchView(trigger.dataset.viewTarget);
       return;
     }
 
@@ -892,10 +1108,6 @@ function bindEvents() {
       if (!state.clients.length) {
         window.alert("Cadastre ao menos um cliente antes de criar um emprestimo.");
         return;
-      }
-
-      if (trigger.dataset.clientId) {
-        elements.loanClientSelect.value = trigger.dataset.clientId;
       }
 
       openModal("loan-modal");
@@ -924,6 +1136,26 @@ function bindEvents() {
 
     if (action === "export-data") {
       exportData();
+    }
+
+    if (action === "select-loan") {
+      selectedLoanId = trigger.dataset.loanId;
+      switchView("emprestimos");
+      renderAll();
+    }
+
+    if (action === "set-loan-filter") {
+      loanFilter = trigger.dataset.filter;
+      renderLoans();
+      updateNavState();
+    }
+  });
+
+  document.body.addEventListener("input", function (event) {
+    if (event.target.matches("[data-role='loan-search']")) {
+      loanSearch = event.target.value;
+      renderLoans();
+      updateNavState();
     }
   });
 

@@ -5,123 +5,87 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Controle pessoal de emprestimos com dashboard, clientes, vencimentos e recebimentos."
+      content="TSDB, app pessoal para controle de emprestimos, atrasos, recebimentos e relatorios."
     />
-    <meta name="theme-color" content="#0f0c08" />
+    <meta name="theme-color" content="#08111f" />
     <title>TSDB | Controle de Emprestimos</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icons/icon-192.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
-    <div class="page-glow page-glow--one"></div>
-    <div class="page-glow page-glow--two"></div>
+    <div class="ambient ambient--left"></div>
+    <div class="ambient ambient--right"></div>
 
     <div class="app-shell">
-      <aside class="sidebar">
-        <div class="brand">
-          <span class="brand__mark">TS</span>
-          <div>
-            <p class="eyebrow">PWA Pessoal</p>
-            <h1>TSDB</h1>
-            <p class="brand__copy">Carteira privada para acompanhar clientes, cobrancas e lucro.</p>
-          </div>
-        </div>
+      <div class="phone-frame">
+        <div class="phone-frame__shine"></div>
 
-        <nav class="sidebar__nav" aria-label="Navegacao principal">
-          <button type="button" class="nav-link is-active" data-view-target="dashboard">
-            <span>Dashboard</span>
-            <small>Visao financeira</small>
+        <main class="app-surface">
+          <section class="view is-active" id="dashboard"></section>
+          <section class="view" id="emprestimos"></section>
+          <section class="view" id="relatorios"></section>
+          <section class="view" id="configuracoes"></section>
+        </main>
+
+        <button type="button" class="fab-button" data-action="open-loan" aria-label="Novo emprestimo">
+          <span>+</span>
+        </button>
+
+        <nav class="mobile-nav" aria-label="Navegacao principal">
+          <button type="button" class="mobile-nav__item is-active" data-view-target="dashboard">
+            <small>Inicio</small>
           </button>
-          <button type="button" class="nav-link" data-view-target="clientes">
-            <span>Clientes</span>
-            <small>Cadastro e historico</small>
+          <button type="button" class="mobile-nav__item" data-view-target="emprestimos">
+            <small>Emprestimos</small>
           </button>
-          <button type="button" class="nav-link" data-view-target="emprestimos">
-            <span>Emprestimos</span>
-            <small>Operacoes e saldos</small>
+          <button type="button" class="mobile-nav__item" data-view-target="relatorios">
+            <small>Relatorios</small>
           </button>
-          <button type="button" class="nav-link" data-view-target="agenda">
-            <span>Agenda</span>
-            <small>Vencimentos e atrasos</small>
-          </button>
-          <button type="button" class="nav-link" data-view-target="configuracoes">
-            <span>Configuracoes</span>
-            <small>Backup e publicacao</small>
+          <button type="button" class="mobile-nav__item" data-view-target="configuracoes">
+            <small>Ajustes</small>
           </button>
         </nav>
-
-        <section class="sidebar__panel">
-          <p class="eyebrow">Panorama</p>
-          <div id="snapshot" class="snapshot"></div>
-        </section>
-      </aside>
-
-      <main class="main-content">
-        <header class="topbar">
-          <div>
-            <p class="eyebrow">Controle proprio</p>
-            <h2 id="view-title">Dashboard</h2>
-            <p class="topbar__copy">Uma base pensada para operar rapido no celular e no desktop.</p>
-          </div>
-
-          <div class="topbar__actions">
-            <button type="button" class="action-button action-button--ghost" data-action="open-payment">
-              Registrar pagamento
-            </button>
-            <button type="button" class="action-button action-button--secondary" data-action="open-client">
-              Novo cliente
-            </button>
-            <button type="button" class="action-button" data-action="open-loan">
-              Novo emprestimo
-            </button>
-          </div>
-        </header>
-
-        <section class="view is-active" id="dashboard"></section>
-        <section class="view" id="clientes"></section>
-        <section class="view" id="emprestimos"></section>
-        <section class="view" id="agenda"></section>
-        <section class="view" id="configuracoes"></section>
-      </main>
+      </div>
     </div>
 
     <div class="modal is-hidden" id="client-modal" aria-hidden="true">
       <div class="modal__backdrop" data-action="close-modal" data-modal-id="client-modal"></div>
-      <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="client-modal-title">
+      <div class="modal__sheet" role="dialog" aria-modal="true" aria-labelledby="client-modal-title">
         <form class="modal__card" id="client-form">
+          <div class="modal__grab"></div>
           <div class="modal__header">
             <div>
-              <p class="eyebrow">Cadastro</p>
+              <p class="modal__eyebrow">Cadastro</p>
               <h3 id="client-modal-title">Novo cliente</h3>
             </div>
-            <button type="button" class="icon-button" data-action="close-modal" data-modal-id="client-modal">
+            <button type="button" class="modal__close" data-action="close-modal" data-modal-id="client-modal">
               Fechar
             </button>
           </div>
 
-          <label>
-            Nome
-            <input name="name" required placeholder="Nome completo" />
+          <label class="field">
+            <span>Nome</span>
+            <input name="name" required placeholder="Digite o nome do devedor" />
           </label>
-          <label>
-            Telefone
+          <label class="field">
+            <span>Telefone</span>
             <input name="phone" placeholder="(00) 00000-0000" />
           </label>
-          <label>
-            Documento
+          <label class="field">
+            <span>Documento</span>
             <input name="document" placeholder="Opcional" />
           </label>
-          <label>
-            Observacoes
-            <textarea name="notes" rows="4" placeholder="Anotacoes importantes"></textarea>
+          <label class="field">
+            <span>Observacoes</span>
+            <textarea name="notes" rows="4" placeholder="Adicione uma observacao..."></textarea>
           </label>
 
           <div class="modal__footer">
-            <button type="button" class="action-button action-button--ghost" data-action="close-modal" data-modal-id="client-modal">
+            <button type="button" class="button button--ghost" data-action="close-modal" data-modal-id="client-modal">
               Cancelar
             </button>
-            <button type="submit" class="action-button">Salvar cliente</button>
+            <button type="submit" class="button button--primary">Salvar cliente</button>
           </div>
         </form>
       </div>
@@ -129,62 +93,67 @@
 
     <div class="modal is-hidden" id="loan-modal" aria-hidden="true">
       <div class="modal__backdrop" data-action="close-modal" data-modal-id="loan-modal"></div>
-      <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="loan-modal-title">
+      <div class="modal__sheet" role="dialog" aria-modal="true" aria-labelledby="loan-modal-title">
         <form class="modal__card" id="loan-form">
+          <div class="modal__grab"></div>
           <div class="modal__header">
             <div>
-              <p class="eyebrow">Operacao</p>
+              <p class="modal__eyebrow">Operacao</p>
               <h3 id="loan-modal-title">Novo emprestimo</h3>
             </div>
-            <button type="button" class="icon-button" data-action="close-modal" data-modal-id="loan-modal">
+            <button type="button" class="modal__close" data-action="close-modal" data-modal-id="loan-modal">
               Fechar
             </button>
           </div>
 
-          <label>
-            Cliente
+          <label class="field">
+            <span>Cliente</span>
             <select name="clientId" required id="loan-client-select"></select>
           </label>
-          <div class="grid-two">
-            <label>
-              Valor principal
-              <input name="principal" type="number" min="0" step="0.01" required />
+
+          <div class="field-grid">
+            <label class="field">
+              <span>Valor emprestado</span>
+              <input name="principal" type="number" min="0" step="0.01" placeholder="0,00" required />
             </label>
-            <label>
-              Percentual combinado
-              <input name="rate" type="number" min="0" step="0.1" required placeholder="30" />
+            <label class="field">
+              <span>Juros contratado (%)</span>
+              <input name="rate" type="number" min="0" step="0.1" placeholder="30" required />
             </label>
           </div>
-          <div class="grid-two">
-            <label>
-              Data do emprestimo
+
+          <div class="field-grid">
+            <label class="field">
+              <span>Data do emprestimo</span>
               <input name="issuedAt" type="date" required />
             </label>
-            <label>
-              Data do vencimento
+            <label class="field">
+              <span>Data de vencimento</span>
               <input name="dueDate" type="date" required />
             </label>
           </div>
-          <div class="grid-two">
-            <label>
-              Juros por dia de atraso
-              <input name="lateFeeRate" type="number" min="0" step="0.1" required placeholder="1" />
+
+          <div class="field-grid">
+            <label class="field">
+              <span>Juros por atraso (% ao dia)</span>
+              <input name="lateFeeRate" type="number" min="0" step="0.1" placeholder="2" required />
             </label>
-            <label>
-              Valor final manual
+            <label class="field">
+              <span>Valor final manual</span>
               <input name="manualTarget" type="number" min="0" step="0.01" placeholder="Opcional" />
             </label>
           </div>
-          <label>
-            Observacoes
-            <textarea name="notes" rows="4" placeholder="Combinados, garantias, local de pagamento"></textarea>
+
+          <label class="field">
+            <span>Observacoes</span>
+            <textarea name="notes" rows="4" placeholder="Garantias, combinados, local de pagamento..."></textarea>
           </label>
 
           <div class="modal__footer">
-            <button type="button" class="action-button action-button--ghost" data-action="close-modal" data-modal-id="loan-modal">
+            <button type="button" class="button button--ghost" data-action="close-modal" data-modal-id="loan-modal">
               Cancelar
             </button>
-            <button type="submit" class="action-button">Salvar emprestimo</button>
+            <button type="submit" class="button button--primary">Salvar emprestimo</button>
           </div>
         </form>
       </div>
@@ -192,46 +161,49 @@
 
     <div class="modal is-hidden" id="payment-modal" aria-hidden="true">
       <div class="modal__backdrop" data-action="close-modal" data-modal-id="payment-modal"></div>
-      <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="payment-modal-title">
+      <div class="modal__sheet" role="dialog" aria-modal="true" aria-labelledby="payment-modal-title">
         <form class="modal__card" id="payment-form">
+          <div class="modal__grab"></div>
           <div class="modal__header">
             <div>
-              <p class="eyebrow">Recebimento</p>
+              <p class="modal__eyebrow">Recebimento</p>
               <h3 id="payment-modal-title">Registrar pagamento</h3>
             </div>
-            <button type="button" class="icon-button" data-action="close-modal" data-modal-id="payment-modal">
+            <button type="button" class="modal__close" data-action="close-modal" data-modal-id="payment-modal">
               Fechar
             </button>
           </div>
 
-          <label>
-            Emprestimo
+          <label class="field">
+            <span>Emprestimo</span>
             <select name="loanId" required id="payment-loan-select"></select>
           </label>
-          <div class="grid-two">
-            <label>
-              Data do pagamento
+
+          <div class="field-grid">
+            <label class="field">
+              <span>Data do pagamento</span>
               <input name="paidAt" type="date" required />
             </label>
-            <label>
-              Valor pago
-              <input name="amount" type="number" min="0" step="0.01" required />
+            <label class="field">
+              <span>Valor pago</span>
+              <input name="amount" type="number" min="0" step="0.01" placeholder="0,00" required />
             </label>
           </div>
-          <label>
-            Metodo
+
+          <label class="field">
+            <span>Metodo</span>
             <input name="method" placeholder="Pix, dinheiro, transferencia..." />
           </label>
-          <label>
-            Observacoes
+          <label class="field">
+            <span>Observacoes</span>
             <textarea name="notes" rows="4" placeholder="Detalhes do recebimento"></textarea>
           </label>
 
           <div class="modal__footer">
-            <button type="button" class="action-button action-button--ghost" data-action="close-modal" data-modal-id="payment-modal">
+            <button type="button" class="button button--ghost" data-action="close-modal" data-modal-id="payment-modal">
               Cancelar
             </button>
-            <button type="submit" class="action-button">Salvar pagamento</button>
+            <button type="submit" class="button button--primary">Salvar pagamento</button>
           </div>
         </form>
       </div>
