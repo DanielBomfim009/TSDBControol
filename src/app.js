@@ -470,12 +470,16 @@ function renderHeader(config) {
         </div>
       </div>
       <div class="screen-header__row">
-        <button type="button" class="icon-shell">${config.leftIcon || "="}</button>
+        <button type="button" class="icon-shell" ${config.leftAction ? `data-action="${config.leftAction}"` : ""} ${config.leftView ? `data-view-target="${config.leftView}"` : ""}>
+          ${config.leftIcon || "="}
+        </button>
         <div class="screen-header__title">
           <h1>${config.title}</h1>
           <p>${config.subtitle}</p>
         </div>
-        <button type="button" class="icon-shell ${config.rightClass || ""}">${config.rightIcon || "+"}</button>
+        <button type="button" class="icon-shell ${config.rightClass || ""}" ${config.rightAction ? `data-action="${config.rightAction}"` : ""} ${config.rightView ? `data-view-target="${config.rightView}"` : ""}>
+          ${config.rightIcon || "+"}
+        </button>
       </div>
     </header>
   `;
@@ -491,7 +495,9 @@ function renderDashboard() {
       title: `Ola, ${getGreetingName()}!`,
       subtitle: "Aqui esta o resumo dos seus emprestimos",
       rightIcon: "!",
-      rightClass: "notification"
+      rightClass: "notification",
+      leftView: "configuracoes",
+      rightAction: "open-payment"
     })}
 
     <div class="screen-stack">
@@ -504,26 +510,48 @@ function renderDashboard() {
         </div>
 
         <div class="stat-grid">
-          <article class="stat-tile">
+          <button type="button" class="stat-tile stat-tile--button" data-view-target="relatorios">
             <span class="stat-tile__icon stat-tile__icon--green">R$</span>
             <span>Total emprestado</span>
             <strong>${formatCurrency(metrics.totalPrincipal)}</strong>
-          </article>
-          <article class="stat-tile">
+          </button>
+          <button type="button" class="stat-tile stat-tile--button" data-view-target="emprestimos">
             <span class="stat-tile__icon stat-tile__icon--blue">IN</span>
             <span>A receber</span>
             <strong>${formatCurrency(metrics.totalCurrent)}</strong>
-          </article>
-          <article class="stat-tile">
+          </button>
+          <button type="button" class="stat-tile stat-tile--button" data-action="show-on-time">
             <span class="stat-tile__icon stat-tile__icon--yellow">OK</span>
             <span>Em dia</span>
             <strong>${formatCurrency(metrics.openAmount)}</strong>
-          </article>
-          <article class="stat-tile">
+          </button>
+          <button type="button" class="stat-tile stat-tile--button" data-action="show-overdue">
             <span class="stat-tile__icon stat-tile__icon--red">AL</span>
             <span>Atrasados</span>
             <strong>${formatCurrency(metrics.overdueAmount)}</strong>
-          </article>
+          </button>
+        </div>
+      </section>
+
+      <section class="summary-card">
+        <div class="card-heading">
+          <div>
+            <h3>Acoes rapidas</h3>
+          </div>
+        </div>
+        <div class="quick-actions">
+          <button type="button" class="quick-action" data-action="open-client">
+            <strong>Novo cliente</strong>
+            <span>Adicionar contato</span>
+          </button>
+          <button type="button" class="quick-action" data-action="open-loan">
+            <strong>Novo emprestimo</strong>
+            <span>Criar operacao</span>
+          </button>
+          <button type="button" class="quick-action" data-action="open-payment">
+            <strong>Pagamento</strong>
+            <span>Registrar recebimento</span>
+          </button>
         </div>
       </section>
 
@@ -604,7 +632,9 @@ function renderLoans() {
       leftIcon: "<",
       title: "Meus Emprestimos",
       subtitle: "Controle sua carteira com filtros rapidos",
-      rightIcon: ":"
+      rightIcon: "+",
+      leftView: "dashboard",
+      rightAction: "open-loan"
     })}
 
     <div class="toolbar">
@@ -730,7 +760,9 @@ function renderReports() {
       leftIcon: "<",
       title: "Relatorios",
       subtitle: "Leitura financeira da carteira",
-      rightIcon: "."
+      rightIcon: "$",
+      leftView: "dashboard",
+      rightAction: "open-payment"
     })}
 
     <div class="screen-stack">
@@ -792,7 +824,9 @@ function renderSettings() {
       leftIcon: "<",
       title: "Configuracoes",
       subtitle: "Backup, clientes e manutencao",
-      rightIcon: "."
+      rightIcon: "+",
+      leftView: "dashboard",
+      rightAction: "open-client"
     })}
 
     <div class="settings-grid">
@@ -1136,6 +1170,18 @@ function bindEvents() {
 
     if (action === "export-data") {
       exportData();
+    }
+
+    if (action === "show-overdue") {
+      loanFilter = "atrasados";
+      switchView("emprestimos");
+      renderAll();
+    }
+
+    if (action === "show-on-time") {
+      loanFilter = "em-dia";
+      switchView("emprestimos");
+      renderAll();
     }
 
     if (action === "select-loan") {

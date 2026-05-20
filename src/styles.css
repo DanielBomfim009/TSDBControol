@@ -52,6 +52,9 @@ textarea {
 
 button {
   cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
 }
 
 input,
@@ -139,6 +142,7 @@ textarea {
 
 .app-surface {
   position: relative;
+  z-index: 1;
   min-height: 100%;
   padding: 26px 18px 118px;
 }
@@ -304,6 +308,64 @@ textarea {
   border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
+.stat-tile--button,
+.loan-row--button,
+.quick-action,
+.mini-link,
+.icon-shell,
+.mobile-nav__item,
+.button,
+.tab-button,
+.modal__close,
+.text-link {
+  transition:
+    transform 160ms ease,
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.stat-tile--button {
+  width: 100%;
+  border-color: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  text-align: left;
+}
+
+.stat-tile--button:hover,
+.stat-tile--button:focus-visible,
+.quick-action:hover,
+.quick-action:focus-visible,
+.loan-row--button:hover,
+.loan-row--button:focus-visible,
+.mini-link:hover,
+.mini-link:focus-visible,
+.icon-shell:hover,
+.icon-shell:focus-visible,
+.mobile-nav__item:hover,
+.mobile-nav__item:focus-visible,
+.button:hover,
+.button:focus-visible,
+.tab-button:hover,
+.tab-button:focus-visible,
+.modal__close:hover,
+.modal__close:focus-visible,
+.text-link:hover,
+.text-link:focus-visible {
+  transform: translateY(-1px);
+}
+
+.stat-tile--button:hover,
+.stat-tile--button:focus-visible,
+.quick-action:hover,
+.quick-action:focus-visible,
+.loan-row--button:hover,
+.loan-row--button:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(73, 210, 99, 0.18);
+}
+
 .stat-tile__icon {
   display: inline-grid;
   place-items: center;
@@ -433,6 +495,33 @@ textarea {
   background: rgba(10, 22, 36, 0.95);
 }
 
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.quick-action {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  text-align: left;
+}
+
+.quick-action strong,
+.quick-action span {
+  display: block;
+}
+
+.quick-action span {
+  margin-top: 8px;
+  color: var(--text-soft);
+  font-size: 0.82rem;
+}
+
 .mini-link {
   border: 0;
   padding: 0;
@@ -463,6 +552,7 @@ textarea {
   text-align: left;
   padding-left: 0;
   padding-right: 0;
+  border-radius: 16px;
 }
 
 .loan-row:first-child {
@@ -954,6 +1044,7 @@ textarea {
   left: 14px;
   right: 14px;
   bottom: 14px;
+  z-index: 3;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: end;
@@ -986,6 +1077,7 @@ textarea {
 
 .fab-button {
   position: absolute;
+  z-index: 4;
   left: 50%;
   bottom: 52px;
   transform: translateX(-50%);
@@ -1003,6 +1095,11 @@ textarea {
 .fab-button span {
   display: block;
   transform: translateY(-1px);
+}
+
+.fab-button:hover,
+.fab-button:focus-visible {
+  transform: translateX(-50%) translateY(-2px);
 }
 
 .modal {
@@ -1121,6 +1218,19 @@ textarea {
   .app-surface {
     padding-left: 16px;
     padding-right: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .quick-actions,
+  .field-grid,
+  .modal__footer {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-grid {
+    grid-template-columns: 1fr;
+    justify-items: center;
   }
 }
 
