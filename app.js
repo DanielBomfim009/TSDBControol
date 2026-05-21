@@ -17,7 +17,9 @@ const state = {
   screen: "dashboard",
   filter: "all",
   search: "",
+  clientSearch: "",
   selectedLoanId: null,
+  selectedClientKey: null,
   editingLoanId: null,
   draft: null,
   reportPeriod: "month",
@@ -31,6 +33,8 @@ const dom = {
   loading: document.querySelector("#loading-screen"),
   screens: {
     dashboard: document.querySelector("#screen-dashboard"),
+    wallet: document.querySelector("#screen-wallet"),
+    clients: document.querySelector("#screen-clients"),
     loans: document.querySelector("#screen-loans"),
     newLoan: document.querySelector("#screen-new-loan"),
     calendar: document.querySelector("#screen-calendar"),
@@ -67,7 +71,7 @@ function loadData() {
     }
   }
 
-  return { audit: [], loans: [] };
+  return { audit: [], walletMovements: [], loans: [] };
 }
 
 function loadSettings() {
@@ -94,6 +98,9 @@ function saveSettings() {
 function normalizeData(data) {
   return {
     audit: Array.isArray(data.audit) ? data.audit.map(normalizeAudit).filter(Boolean) : [],
+    walletMovements: Array.isArray(data.walletMovements)
+      ? data.walletMovements.map(normalizeWalletMovement).filter(Boolean)
+      : [],
     loans: (data.loans || []).map((loan) => ({
       id: loan.id || createId(),
       name: String(loan.name || loan.clientName || "Cliente sem nome"),
@@ -133,7 +140,7 @@ function migrateLegacyData(legacy) {
     };
   });
 
-  return { audit: [], loans };
+  return { audit: [], walletMovements: [], loans };
 }
 
 function normalizePayment(payment) {
@@ -156,6 +163,21 @@ function normalizeAudit(entry) {
     type: entry.type || "info",
     loanId: entry.loanId || "",
     message: String(entry.message || ""),
+    createdAt: entry.createdAt || new Date().toISOString()
+  };
+}
+
+function normalizeWalletMovement(entry) {
+  if (!entry || !entry.label) {
+    return null;
+  }
+
+  return {
+    id: entry.id || createId(),
+    type: entry.type || "adjust",
+    loanId: entry.loanId || "",
+    amount: parseNumber(entry.amount),
+    label: String(entry.label || ""),
     createdAt: entry.createdAt || new Date().toISOString()
   };
 }
@@ -350,6 +372,7 @@ function getSelectedLoan() {
 
 function getMetrics() {
   const loans = getLoans();
+  const clientGroups = buildClientGroups(loans);
   const overdue = loans.filter((loan) => loan.status === "overdue");
   const paid = loans.filter((loan) => loan.status === "paid");
   const active = loans.filter((loan) => loan.status !== "paid");
@@ -374,17 +397,137 @@ function getMetrics() {
     profitReceived: loans.reduce((sum, loan) => sum + loan.profitReceived, 0),
     walletAvailable: getWalletAvailable(),
     clients: clientNames.size,
+    clientGroups,
+    activeClients: clientGroups.filter((client) => client.balance > 0).length,
+    overdueClients: clientGroups.filter((client) => client.overdueCount > 0).length,
     lateRate: loans.length ? Math.round((overdue.length / loans.length) * 100) : 0
   };
+}
+
+function clientKey(name, phone = "") {
+  const digits = String(phone || "").replace(/\D/g, "");
+  const normalizedName = String(name || "Cliente sem nome")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  return digits || normalizedName || createId();
+}
+
+function buildClientGroups(loans = getLoans()) {
+  const groups = new Map();
+
+  loans.forEach((loan) => {
+    const key = clientKey(loan.name, loan.phone);
+    const current =
+      groups.get(key) ||
+      {
+        key,
+        name: loan.name,
+        phone: loan.phone,
+        loans: [],
+        totalPrincipal: 0,
+        totalPaid: 0,
+        balance: 0,
+        profitReceived: 0,
+        overdueCount: 0,
+        activeCount: 0,
+        paidCount: 0,
+        nextDueDate: "",
+        lastIssueDate: ""
+      };
+
+    current.loans.push(loan);
+    current.totalPrincipal += loan.principal;
+    current.totalPaid += loan.paidAmount;
+    current.balance += loan.balance;
+    current.profitReceived += loan.profitReceived;
+    current.overdueCount += loan.status === "overdue" ? 1 : 0;
+    current.activeCount += loan.status !== "paid" ? 1 : 0;
+    current.paidCount += loan.status === "paid" ? 1 : 0;
+    current.nextDueDate =
+      loan.status !== "paid" && (!current.nextDueDate || parseDate(loan.dueDate) < parseDate(current.nextDueDate))
+        ? loan.dueDate
+        : current.nextDueDate;
+    current.lastIssueDate =
+      !current.lastIssueDate || parseDate(loan.issueDate) > parseDate(current.lastIssueDate)
+        ? loan.issueDate
+        : current.lastIssueDate;
+
+    groups.set(key, current);
+  });
+
+  return Array.from(groups.values())
+    .map((client) => ({
+      ...client,
+      status: client.overdueCount ? "overdue" : client.activeCount ? "active" : "paid",
+      loans: client.loans.sort((a, b) => parseDate(a.dueDate) - parseDate(b.dueDate))
+    }))
+    .sort((a, b) => b.overdueCount - a.overdueCount || b.balance - a.balance || a.name.localeCompare(b.name));
+}
+
+function getClientGroups() {
+  const search = state.clientSearch.trim().toLowerCase();
+
+  return buildClientGroups().filter((client) => {
+    if (!search) {
+      return true;
+    }
+
+    const phoneSearch = search.replace(/\D/g, "");
+    return client.name.toLowerCase().includes(search) || (phoneSearch && String(client.phone || "").replace(/\D/g, "").includes(phoneSearch));
+  });
+}
+
+function getSelectedClient() {
+  if (!state.selectedClientKey) {
+    return null;
+  }
+
+  return buildClientGroups().find((client) => client.key === state.selectedClientKey) || null;
 }
 
 function getWalletAvailable() {
   return Math.max(parseNumber(state.settings.walletAvailable), 0);
 }
 
-function updateWalletAvailable(delta) {
-  state.settings.walletAvailable = Math.max(getWalletAvailable() + Number(delta || 0), 0);
+function updateWalletAvailable(delta, movement = {}) {
+  const current = getWalletAvailable();
+  const next = Math.max(current + Number(delta || 0), 0);
+  const applied = next - current;
+
+  state.settings.walletAvailable = next;
+
+  if (applied) {
+    addWalletMovement(
+      movement.type || (applied > 0 ? "inflow" : "outflow"),
+      applied,
+      movement.label || (applied > 0 ? "Entrada na carteira" : "Saida da carteira"),
+      movement.loanId || ""
+    );
+  }
+
   saveSettings();
+}
+
+function addWalletMovement(type, amount, label, loanId = "") {
+  state.data.walletMovements = Array.isArray(state.data.walletMovements) ? state.data.walletMovements : [];
+  state.data.walletMovements.unshift({
+    id: createId(),
+    type,
+    loanId,
+    amount: Number(amount || 0),
+    label,
+    createdAt: new Date().toISOString()
+  });
+  state.data.walletMovements = state.data.walletMovements.slice(0, 500);
+}
+
+function getWalletMovements() {
+  return (state.data.walletMovements || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 function addAudit(type, message, loanId = "") {
@@ -553,6 +696,8 @@ function statusMeta(loan) {
 
 function render() {
   renderDashboard();
+  renderWallet();
+  renderClients();
   renderLoans();
   renderNewLoan();
   renderCalendar();
@@ -600,14 +745,14 @@ function renderHeader(title, subtitle, backAction, actions = "") {
 
 function renderDashboard() {
   const metrics = getMetrics();
-  const insights = getPortfolioInsights(metrics);
+  const attentionLoans = [...metrics.overdue, ...metrics.dueToday].slice(0, 4);
 
   dom.screens.dashboard.innerHTML = `
     ${renderHeader(
       "TSDB Emprestimos",
       "Sistema inteligente para controlar juros, vencimentos e recebimentos.",
       null,
-      `<button class="icon-button" type="button" data-action="loans" aria-label="Alertas"><i class="fa-regular fa-bell"></i></button>`
+      `<button class="icon-button" type="button" data-action="calendar" aria-label="Alertas"><i class="fa-regular fa-bell"></i></button>`
     )}
 
     <section class="section-block wallet-panel">
@@ -617,9 +762,24 @@ function renderDashboard() {
         <strong>${formatCurrency(metrics.walletAvailable)}</strong>
         <p>Esse valor diminui ao cadastrar empréstimos e aumenta quando pagamentos são registrados.</p>
       </div>
-      <button class="button button-secondary" type="button" data-action="settings">
-        <i class="fa-solid fa-pen-to-square"></i>
-        Ajustar saldo
+      <button class="button button-secondary" type="button" data-action="wallet">
+        <i class="fa-solid fa-vault"></i>
+        Ver carteira
+      </button>
+    </section>
+
+    <section class="section-block priority-strip">
+      <button type="button" data-action="wallet">
+        <span>Carteira</span>
+        <strong>${formatCurrency(metrics.walletAvailable)}</strong>
+      </button>
+      <button type="button" data-action="clients">
+        <span>Clientes ativos</span>
+        <strong>${metrics.activeClients}</strong>
+      </button>
+      <button type="button" data-action="filter-overdue">
+        <span>Atrasados</span>
+        <strong class="status-red">${metrics.overdue.length}</strong>
       </button>
     </section>
 
@@ -631,31 +791,20 @@ function renderDashboard() {
         </div>
       </div>
       <div class="metric-grid">
-        ${metricCard("Saldo disponível", metrics.walletAvailable, "Pronto para emprestar", "green", "fa-vault", "settings")}
+        ${metricCard("A receber", metrics.totalReceivable, "Saldo aberto", "green", "fa-sack-dollar", "loans")}
         ${metricCard("Emprestado", metrics.totalPrincipal, "Capital lançado", "blue", "fa-scale-balanced", "reports")}
-        ${metricCard("A receber", metrics.totalReceivable, "Saldo aberto", "blue", "fa-sack-dollar", "loans")}
         ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.overdue.length} operacao(oes)`, "red", "fa-triangle-exclamation", "filter-overdue")}
+        ${metricCard("Lucro recebido", metrics.profitReceived, "Realizado", "green", "fa-chart-line", "reports")}
       </div>
     </section>
 
     <section class="section-block">
       <div class="action-grid">
         ${actionCard("Novo emprestimo", "Cadastro com calculo em tempo real", "fa-plus", "new-loan")}
+        ${actionCard("Clientes", "Lista limpa e detalhes sob demanda", "fa-users", "clients")}
         ${actionCard("Emprestimos", "Lista, detalhes e cobrancas", "fa-wallet", "loans")}
         ${actionCard("Agenda", "Calendario de vencimentos e cobrancas", "fa-calendar-days", "calendar")}
       </div>
-    </section>
-
-    <section class="section-block panel-card hero-panel">
-      <div>
-        <span class="eyebrow">Inteligencia da carteira</span>
-        <h3>${metrics.overdue.length ? "Priorize os atrasos antes de novos aportes" : "Carteira saudavel e sob controle"}</h3>
-        <p>${metrics.overdue.length ? `${metrics.overdue.length} operacao(oes) atrasada(s), somando ${formatCurrency(metrics.totalOverdue)}.` : "Nenhuma operacao atrasada no momento. Mantenha a agenda atualizada."}</p>
-      </div>
-      <button class="button button-secondary" type="button" data-action="calendar">
-        <i class="fa-solid fa-calendar-check"></i>
-        Ver agenda
-      </button>
     </section>
 
     <section class="section-block panel-card">
@@ -683,41 +832,21 @@ function renderDashboard() {
 
     <section class="section-block">
       <div class="section-head">
-        <h3>Proximos vencimentos</h3>
-        <button class="link-button" type="button" data-action="loans">Ver todos</button>
+        <div>
+          <h3>Hoje e atrasados</h3>
+          <p>Fila enxuta para agir rapido</p>
+        </div>
+        <button class="link-button" type="button" data-action="calendar">Ver agenda</button>
       </div>
       <div class="loan-list">
-        ${metrics.dueSoon.length ? metrics.dueSoon.map(renderLoanCard).join("") : emptyState("Nenhum vencimento em aberto.")}
-      </div>
-    </section>
-
-    <section class="section-block">
-      <div class="section-head">
-        <div>
-          <h3>Ranking inteligente</h3>
-          <p>Prioridades e oportunidades da carteira</p>
-        </div>
-      </div>
-      <div class="insight-grid">
-        ${insights.map(renderInsightCard).join("")}
-      </div>
-    </section>
-
-    <section class="section-block">
-      <div class="section-head">
-        <div>
-          <h3>Atrasados</h3>
-          <p>Prioridade de cobranca</p>
-        </div>
-      </div>
-      <div class="loan-list">
-        ${metrics.overdue.length ? metrics.overdue.slice(0, 4).map(renderLoanCard).join("") : emptyState("Sem atrasos no momento.")}
+        ${attentionLoans.length ? attentionLoans.map(renderLoanCard).join("") : emptyState("Nenhuma cobranca urgente agora.")}
       </div>
     </section>
 
     <section class="section-block">
       <div class="section-head">
         <h3>Pagamentos recentes</h3>
+        <button class="link-button" type="button" data-action="wallet">Ver carteira</button>
       </div>
       <div class="recent-list">
         ${renderRecentPayments()}
@@ -772,9 +901,241 @@ function legendRow(label, value, tone) {
   `;
 }
 
+function renderWallet() {
+  const metrics = getMetrics();
+  const movements = getWalletMovements();
+  const recentMovements = movements.slice(0, 12);
+
+  dom.screens.wallet.innerHTML = `
+    ${renderHeader("Carteira", "Saldo disponivel, movimentacoes e capacidade para novos emprestimos.", "dashboard")}
+
+    <section class="section-block wallet-panel wallet-panel-large">
+      <div>
+        <span class="eyebrow">Saldo disponível</span>
+        <strong>${formatCurrency(metrics.walletAvailable)}</strong>
+        <p>Controle o dinheiro livre para emprestar. Cada novo emprestimo reduz o saldo e cada pagamento recebido aumenta automaticamente.</p>
+      </div>
+      <button class="button button-primary" type="button" data-action="settings">
+        <i class="fa-solid fa-pen-to-square"></i>
+        Ajustar saldo
+      </button>
+    </section>
+
+    <section class="section-block">
+      <div class="metric-grid">
+        ${metricCard("Capital aplicado", metrics.totalPrincipal, "Total ja emprestado", "blue", "fa-money-bill-trend-up", "reports")}
+        ${metricCard("A receber", metrics.totalReceivable, "Saldo aberto", "green", "fa-sack-dollar", "loans")}
+        ${metricCard("Recebido", metrics.totalPaid, "Entradas registradas", "green", "fa-circle-dollar-to-slot", "reports")}
+        ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.overdueClients} cliente(s)`, "red", "fa-triangle-exclamation", "clients")}
+      </div>
+    </section>
+
+    <section class="section-block panel-card">
+      <div class="section-head">
+        <div>
+          <h3>Movimentacoes da carteira</h3>
+          <p>Historico automatico para explicar cada mudanca no saldo.</p>
+        </div>
+      </div>
+      <div class="movement-list">
+        ${recentMovements.length ? recentMovements.map(renderWalletMovement).join("") : emptyState("Nenhuma movimentacao registrada ainda. Ajuste o saldo ou cadastre um emprestimo.")}
+      </div>
+    </section>
+  `;
+}
+
+function renderWalletMovement(movement) {
+  const amount = Number(movement.amount || 0);
+  const tone = amount >= 0 ? "green" : "red";
+  const icon = amount >= 0 ? "fa-arrow-trend-up" : "fa-arrow-trend-down";
+
+  return `
+    <article class="movement-item">
+      <span class="metric-icon ${tone}"><i class="fa-solid ${icon}"></i></span>
+      <div>
+        <strong>${escapeHtml(movement.label)}</strong>
+        <small>${formatDate(String(movement.createdAt).slice(0, 10))}</small>
+      </div>
+      <strong class="status-${tone}">${amount >= 0 ? "+" : "-"}${formatCurrency(Math.abs(amount))}</strong>
+    </article>
+  `;
+}
+
+function clientStatusMeta(client) {
+  if (client.overdueCount) {
+    return {
+      label: "Atrasado",
+      detail: `${client.overdueCount} operacao(oes) em atraso`,
+      tone: "red"
+    };
+  }
+
+  if (client.activeCount) {
+    return {
+      label: "Em aberto",
+      detail: `${client.activeCount} operacao(oes) ativa(s)`,
+      tone: "green"
+    };
+  }
+
+  return {
+    label: "Pago",
+    detail: "Sem saldo em aberto",
+    tone: "blue"
+  };
+}
+
+function renderClients() {
+  const clients = getClientGroups();
+  const selected = getSelectedClient();
+  const metrics = getMetrics();
+
+  dom.screens.clients.innerHTML = `
+    ${renderHeader(
+      "Clientes",
+      "Lista limpa por cliente. Toque para ver detalhes completos.",
+      "dashboard",
+      `<button class="icon-button" type="button" data-action="reset-client-search" aria-label="Limpar busca"><i class="fa-solid fa-filter-circle-xmark"></i></button>`
+    )}
+
+    <section class="section-block client-summary">
+      <div class="summary-pill">
+        <span>Clientes</span>
+        <strong>${metrics.clients}</strong>
+      </div>
+      <div class="summary-pill">
+        <span>Ativos</span>
+        <strong>${metrics.activeClients}</strong>
+      </div>
+      <div class="summary-pill">
+        <span>Em atraso</span>
+        <strong class="status-red">${metrics.overdueClients}</strong>
+      </div>
+    </section>
+
+    <label class="search-box">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input id="client-search" type="search" placeholder="Buscar cliente ou telefone..." value="${escapeHtml(state.clientSearch)}" />
+    </label>
+
+    <section class="client-list">
+      ${clients.length ? clients.map(renderClientCard).join("") : emptyState("Nenhum cliente encontrado.")}
+    </section>
+
+    ${selected ? renderClientDetail(selected) : `
+      <section class="section-block panel-card quiet-panel">
+        <div class="section-head">
+          <div>
+            <h3>Detalhes sob demanda</h3>
+            <p>Selecione um cliente acima para abrir valores, datas, emprestimos e historico sem poluir a lista principal.</p>
+          </div>
+        </div>
+      </section>
+    `}
+  `;
+
+  const search = document.querySelector("#client-search");
+  if (search) {
+    search.addEventListener("input", (event) => {
+      state.clientSearch = event.target.value;
+      state.selectedClientKey = null;
+      renderClients();
+    });
+  }
+}
+
+function renderClientCard(client) {
+  const meta = clientStatusMeta(client);
+  const selected = state.selectedClientKey === client.key ? " is-selected" : "";
+
+  return `
+    <button class="client-card${selected}" type="button" data-action="select-client" data-client-key="${escapeHtml(client.key)}">
+      <span class="avatar">${initials(client.name)}</span>
+      <span class="client-main">
+        <strong>${escapeHtml(client.name)}</strong>
+        <span>${client.phone ? escapeHtml(client.phone) : `${client.loans.length} emprestimo(s)`}</span>
+      </span>
+      <span class="client-side">
+        <strong>${formatCurrency(client.balance)}</strong>
+        <small class="status-${meta.tone}">${meta.label}</small>
+      </span>
+    </button>
+  `;
+}
+
+function renderClientDetail(client) {
+  const meta = clientStatusMeta(client);
+  const activeLoans = client.loans.filter((loan) => loan.status !== "paid");
+
+  return `
+    <section class="section-block panel-card client-detail">
+      <header class="detail-header">
+        <span class="avatar">${initials(client.name)}</span>
+        <div>
+          <h3>${escapeHtml(client.name)}</h3>
+          <p class="status-${meta.tone}">${meta.detail}</p>
+        </div>
+        <button class="icon-button" type="button" data-action="new-loan" aria-label="Novo emprestimo">
+          <i class="fa-solid fa-plus"></i>
+        </button>
+      </header>
+
+      <div class="detail-grid">
+        ${detailLine("Telefone", client.phone ? escapeHtml(client.phone) : "Nao informado")}
+        ${detailLine("Total emprestado", formatCurrency(client.totalPrincipal))}
+        ${detailLine("Saldo em aberto", formatCurrency(client.balance), client.balance ? "status-green" : "")}
+        ${detailLine("Total recebido", formatCurrency(client.totalPaid))}
+        ${detailLine("Lucro recebido", formatCurrency(client.profitReceived), "status-green")}
+        ${detailLine("Proximo vencimento", client.nextDueDate ? formatDate(client.nextDueDate) : "Sem vencimento aberto")}
+      </div>
+
+      <div class="finance-strip">
+        ${miniStat("Operacoes", String(client.loans.length), "blue")}
+        ${miniStat("Ativas", String(client.activeCount), "green")}
+        ${miniStat("Atrasadas", String(client.overdueCount), client.overdueCount ? "red" : "green")}
+      </div>
+
+      <section class="timeline-card">
+        <div class="section-head">
+          <h4>Emprestimos do cliente</h4>
+          <button class="link-button" type="button" data-action="clear-client-selection">Fechar detalhe</button>
+        </div>
+        <div class="client-loan-list">
+          ${client.loans.length ? client.loans.map(renderClientLoanItem).join("") : emptyState("Nenhum emprestimo para este cliente.")}
+        </div>
+      </section>
+
+      ${
+        activeLoans.length
+          ? `<div class="button-row">
+              <button class="button button-secondary" type="button" data-action="whatsapp" data-loan-id="${activeLoans[0].id}">
+                <i class="fa-brands fa-whatsapp"></i>
+                Cobrar principal
+              </button>
+            </div>`
+          : ""
+      }
+    </section>
+  `;
+}
+
+function renderClientLoanItem(loan) {
+  const meta = statusMeta(loan);
+
+  return `
+    <button class="client-loan-item" type="button" data-action="select-loan" data-loan-id="${loan.id}">
+      <span>
+        <strong>${formatCurrency(loan.balance || loan.totalUpdated)}</strong>
+        <small>${formatDate(loan.dueDate)} - <span class="status-${meta.tone}">${meta.label}</span></small>
+      </span>
+      <i class="fa-solid fa-chevron-right"></i>
+    </button>
+  `;
+}
+
 function renderLoans() {
   const loans = getFilteredLoans();
-  const selected = getSelectedLoan();
+  const selected = state.selectedLoanId ? getLoan(state.selectedLoanId) : null;
 
   dom.screens.loans.innerHTML = `
     ${renderHeader(
@@ -800,7 +1161,16 @@ function renderLoans() {
       ${loans.length ? loans.map(renderLoanCard).join("") : emptyState("Nenhum emprestimo encontrado.")}
     </section>
 
-    ${selected ? renderLoanDetail(selected) : ""}
+    ${selected ? renderLoanDetail(selected) : `
+      <section class="section-block panel-card quiet-panel">
+        <div class="section-head">
+          <div>
+            <h3>Detalhes sob demanda</h3>
+            <p>Selecione um emprestimo na lista para ver valores, juros, pagamentos e acoes.</p>
+          </div>
+        </div>
+      </section>
+    `}
   `;
 
   const search = document.querySelector("#loan-search");
@@ -1234,7 +1604,14 @@ function saveLoanFromForm(event) {
   }
 
   if (principalDelta) {
-    updateWalletAvailable(-principalDelta);
+    updateWalletAvailable(-principalDelta, {
+      type: principalDelta > 0 ? "loan" : "loan-adjust",
+      label:
+        principalDelta > 0
+          ? "Emprestimo liberado para " + payload.name
+          : "Reducao de emprestimo para " + payload.name,
+      loanId: payload.id
+    });
   }
 
   state.selectedLoanId = payload.id;
@@ -1343,6 +1720,7 @@ function renderReports() {
         ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.lateRate}% da carteira`, "red", "fa-triangle-exclamation", "reports")}
         ${metricCard("Lucro recebido", metrics.profitReceived, "Realizado", "green", "fa-chart-line", "reports")}
         ${metricCard("Recebido periodo", periodStats.received, `${periodStats.count} pagamento(s)`, "green", "fa-calendar-check", "reports")}
+        ${metricCard("Clientes ativos", String(metrics.activeClients), `${metrics.overdueClients} com atraso`, "blue", "fa-users", "clients")}
       </div>
     </section>
 
@@ -1365,7 +1743,44 @@ function renderReports() {
         ${legendRow("Pagos", metrics.totalPaid, "blue")}
       </div>
     </section>
+
+    <section class="section-block panel-card">
+      <div class="section-head">
+        <div>
+          <h3>Clientes em destaque</h3>
+          <p>Maiores saldos e riscos para acompanhar.</p>
+        </div>
+      </div>
+      <div class="client-loan-list">
+        ${renderClientRiskRows(metrics.clientGroups)}
+      </div>
+    </section>
   `;
+}
+
+function renderClientRiskRows(clients) {
+  const rows = clients
+    .filter((client) => client.balance > 0 || client.overdueCount > 0)
+    .slice(0, 6);
+
+  if (!rows.length) {
+    return emptyState("Nenhum cliente com saldo em aberto.");
+  }
+
+  return rows
+    .map((client) => {
+      const meta = clientStatusMeta(client);
+      return `
+        <button class="client-loan-item" type="button" data-action="select-client" data-client-key="${escapeHtml(client.key)}">
+          <span>
+            <strong>${escapeHtml(client.name)}</strong>
+            <small class="status-${meta.tone}">${meta.detail}</small>
+          </span>
+          <strong>${formatCurrency(client.balance)}</strong>
+        </button>
+      `;
+    })
+    .join("");
 }
 
 function periodButton(period, label) {
@@ -1490,11 +1905,13 @@ function renderDrawer() {
     <nav class="drawer-groups" aria-label="Opcoes do aplicativo">
       ${drawerGroup("Carteira", "fa-vault", true, [
         drawerButton("dashboard", "Inicio", "Painel principal", "fa-house"),
+        drawerButton("wallet", "Carteira", "Saldo e movimentacoes", "fa-vault"),
         drawerButton("settings", "Saldo disponível", "Ajustar carteira", "fa-coins"),
         drawerButton("reports", "Relatorios", "Indicadores e lucro", "fa-chart-column")
       ])}
       ${drawerGroup("Operacoes", "fa-briefcase", false, [
         drawerButton("new-loan", "Novo emprestimo", "Cadastrar operacao", "fa-plus"),
+        drawerButton("clients", "Clientes", "Lista limpa por pessoa", "fa-users"),
         drawerButton("loans", "Emprestimos", "Lista e cobrancas", "fa-wallet"),
         drawerButton("calendar", "Agenda", "Vencimentos", "fa-calendar-days")
       ])}
@@ -1646,6 +2063,7 @@ function submitPayment(event) {
   event.preventDefault();
   const data = new FormData(event.currentTarget);
   const loanId = data.get("loanId");
+  const selectedLoan = getLoan(loanId);
   const payment = {
     id: createId(),
     paidAt: data.get("paidAt"),
@@ -1656,6 +2074,11 @@ function submitPayment(event) {
 
   if (!loanId || payment.amount <= 0 || !payment.paidAt) {
     alert("Informe data e valor do pagamento.");
+    return;
+  }
+
+  if (!selectedLoan) {
+    alert("Emprestimo nao encontrado.");
     return;
   }
 
@@ -1671,7 +2094,11 @@ function submitPayment(event) {
   });
 
   addAudit("payment", "Pagamento registrado no valor de " + formatCurrency(payment.amount) + ".", loanId);
-  updateWalletAvailable(payment.amount);
+  updateWalletAvailable(payment.amount, {
+    type: "payment",
+    label: "Pagamento recebido de " + selectedLoan.name,
+    loanId
+  });
   saveData();
   closeModal("payment-modal");
   closeModal("loan-menu-modal");
@@ -1704,7 +2131,11 @@ function deleteLoan(loanId) {
   }
 
   addAudit("delete", "Emprestimo excluido: " + loan.name + ".", loanId);
-  updateWalletAvailable(loan.principal - loan.paidAmount);
+  updateWalletAvailable(loan.principal - loan.paidAmount, {
+    type: "delete",
+    label: "Exclusao ajustou saldo de " + loan.name,
+    loanId
+  });
   state.data.loans = state.data.loans.filter((item) => item.id !== loanId);
   if (state.selectedLoanId === loanId) {
     state.selectedLoanId = null;
@@ -1956,7 +2387,10 @@ function closeDrawer() {
 async function saveSettingsFromForm(event) {
   event.preventDefault();
   const data = new FormData(event.currentTarget);
-  state.settings.walletAvailable = parseNumber(data.get("walletAvailable"));
+  const previousWallet = getWalletAvailable();
+  const nextWallet = parseNumber(data.get("walletAvailable"));
+  const walletDiff = nextWallet - previousWallet;
+  state.settings.walletAvailable = nextWallet;
   state.settings.defaultInterestRate = parseNumber(data.get("defaultInterestRate"));
   state.settings.defaultDailyLateRate = parseNumber(data.get("defaultDailyLateRate"));
   const wantsPin = data.get("pinEnabled") === "on";
@@ -1983,6 +2417,13 @@ async function saveSettingsFromForm(event) {
     if (wasPinEnabled) {
       addAudit("security", "PIN de acesso desativado.");
     }
+  }
+  if (walletDiff) {
+    addWalletMovement(
+      "adjust",
+      walletDiff,
+      walletDiff > 0 ? "Ajuste manual aumentou o saldo" : "Ajuste manual reduziu o saldo"
+    );
   }
   saveSettings();
   saveData();
@@ -2023,6 +2464,7 @@ function importBackup(event) {
       state.settings = { ...defaultSettings, ...(payload.settings || state.settings) };
       addAudit("import", "Backup JSON importado com sucesso.");
       state.selectedLoanId = null;
+      state.selectedClientKey = null;
       state.draft = null;
       state.editingLoanId = null;
       saveData();
@@ -2039,8 +2481,9 @@ function clearData() {
   }
 
   addAudit("delete", "Todos os dados foram limpos.");
-  state.data = { audit: [], loans: [] };
+  state.data = { audit: [], walletMovements: [], loans: [] };
   state.selectedLoanId = null;
+  state.selectedClientKey = null;
   state.draft = null;
   state.editingLoanId = null;
   saveData();
@@ -2185,7 +2628,17 @@ function monthlySeries() {
 
 function bindEvents() {
   dom.navItems.forEach((item) => {
-    item.addEventListener("click", () => setScreen(item.dataset.nav));
+    item.addEventListener("click", () => {
+      if (item.dataset.nav === "clients") {
+        state.selectedClientKey = null;
+        renderClients();
+      }
+      if (item.dataset.nav === "loans") {
+        state.selectedLoanId = null;
+        renderLoans();
+      }
+      setScreen(item.dataset.nav);
+    });
   });
 
   document.body.addEventListener("input", (event) => {
@@ -2215,7 +2668,15 @@ function bindEvents() {
     const action = trigger.dataset.action;
     const loanId = trigger.dataset.loanId;
 
-    if (["dashboard", "loans", "calendar", "reports", "settings"].includes(action)) {
+    if (["dashboard", "wallet", "clients", "loans", "calendar", "reports", "settings"].includes(action)) {
+      if (action === "clients") {
+        state.selectedClientKey = null;
+        renderClients();
+      }
+      if (action === "loans") {
+        state.selectedLoanId = null;
+        renderLoans();
+      }
       closeDrawer();
       setScreen(action);
     }
@@ -2230,12 +2691,14 @@ function bindEvents() {
 
     if (action === "filter-overdue") {
       state.filter = "overdue";
+      state.selectedLoanId = null;
       setScreen("loans");
       renderLoans();
     }
 
     if (action === "filter-on-time") {
       state.filter = "on-time";
+      state.selectedLoanId = null;
       setScreen("loans");
       renderLoans();
     }
@@ -2254,12 +2717,31 @@ function bindEvents() {
     if (action === "reset-filter") {
       state.filter = "all";
       state.search = "";
+      state.selectedLoanId = null;
       renderLoans();
     }
 
     if (action === "select-loan") {
       state.selectedLoanId = loanId;
       renderLoans();
+      setScreen("loans");
+    }
+
+    if (action === "select-client") {
+      state.selectedClientKey = trigger.dataset.clientKey || null;
+      renderClients();
+      setScreen("clients");
+    }
+
+    if (action === "clear-client-selection") {
+      state.selectedClientKey = null;
+      renderClients();
+    }
+
+    if (action === "reset-client-search") {
+      state.clientSearch = "";
+      state.selectedClientKey = null;
+      renderClients();
     }
 
     if (action === "open-payment") {

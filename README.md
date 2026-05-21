@@ -16,11 +16,14 @@ Aplicativo financeiro premium para controle pessoal de emprestimos, juros, atras
 
 - Dashboard inicial com totais, lucro, clientes, vencimentos e atrasados.
 - Saldo disponível da carteira com atualização automatica por emprestimos e pagamentos.
+- Tela Carteira com historico automatico de movimentacoes do saldo.
+- Tela Clientes com lista limpa e detalhes completos somente apos selecionar um cliente.
 - Cadastro e edicao de emprestimos com calculo em tempo real.
 - Juros contratado automatico.
 - Juros diario por atraso automatico.
 - Status automaticos: em dia, vence hoje, proximo do vencimento, atrasado e pago.
 - Lista com busca e filtros.
+- Lista de emprestimos sem detalhe aberto por padrao para reduzir poluicao visual.
 - Agenda de vencimentos, atrasos e cobrancas.
 - Menu hamburguer com atalhos operacionais.
 - Registro de pagamentos.

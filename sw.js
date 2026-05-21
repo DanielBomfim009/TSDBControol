@@ -1,9 +1,11 @@
-const CACHE_NAME = "tsdb-premium-v9";
+const CACHE_NAME = "tsdb-premium-v13";
 const APP_ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
+  "./styles.css?v=20260520-wallet-clients-v4",
   "./app.js",
+  "./app.js?v=20260520-wallet-clients-v4",
   "./manifest.webmanifest",
   "./assets/tsdb-mark.svg",
   "./assets/tsdb-logo.svg",
@@ -38,6 +40,19 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) {
+          return cached;
+        }
+
+        return fetch(request).then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          return response;
+        });
+      })
+    );
     return;
   }
 
