@@ -1,11 +1,11 @@
-const CACHE_NAME = "tsdb-premium-v18";
+const CACHE_NAME = "tsdb-premium-v19";
 const APP_ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
-  "./styles.css?v=20260521-ajuste-mobile-v2",
+  "./styles.css?v=20260521-limpeza-layout-v1",
   "./app.js",
-  "./app.js?v=20260521-ajuste-mobile-v2",
+  "./app.js?v=20260521-limpeza-layout-v1",
   "./manifest.webmanifest",
   "./assets/tsdb-mark.svg",
   "./assets/tsdb-logo.svg",

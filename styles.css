@@ -87,6 +87,7 @@ textarea {
   padding: 14px 14px;
   background: rgba(8, 7, 4, 0.86);
   color: var(--text);
+  font-size: 16px;
   line-height: 1.25;
 }
 
@@ -247,7 +248,11 @@ textarea {
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  padding: 26px 16px calc(var(--nav-height) + var(--fab-size) + 48px + env(safe-area-inset-bottom));
+  padding:
+    24px
+    max(14px, env(safe-area-inset-left))
+    calc(var(--nav-height) + var(--fab-size) + 48px + env(safe-area-inset-bottom))
+    max(14px, env(safe-area-inset-right));
 }
 
 .app-content::-webkit-scrollbar {
@@ -446,7 +451,7 @@ textarea {
   display: grid;
   gap: 8px;
   width: 100%;
-  min-height: 124px;
+  min-height: 108px;
   padding: 13px 12px;
   color: var(--text);
   text-align: left;
@@ -581,7 +586,7 @@ textarea {
 }
 
 .wallet-panel-large {
-  min-height: 220px;
+  min-height: 150px;
 }
 
 .insight-grid {
@@ -640,53 +645,9 @@ textarea {
   display: block;
 }
 
-.action-card span {
-  margin-top: 4px;
-  color: var(--muted);
+.action-card > span {
+  color: var(--text);
   line-height: 1.4;
-}
-
-.chart-layout {
-  display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  gap: 16px;
-  align-items: center;
-}
-
-.donut-frame {
-  position: relative;
-  width: 150px;
-  height: 150px;
-  margin: 0 auto;
-}
-
-.donut-frame canvas {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.donut-label {
-  position: absolute;
-  inset: 32px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgba(8, 7, 4, 0.94);
-  text-align: center;
-  padding: 0 10px;
-}
-
-.donut-label span {
-  color: var(--muted);
-  font-size: 0.72rem;
-}
-
-.donut-label strong {
-  display: block;
-  margin-top: 5px;
-  font-size: 1rem;
-  line-height: 1.1;
 }
 
 .legend-list,
@@ -735,15 +696,6 @@ textarea {
 
 .panel-card {
   padding: 15px;
-}
-
-.line-chart-box {
-  height: 210px;
-}
-
-.line-chart-box canvas {
-  width: 100% !important;
-  height: 100% !important;
 }
 
 .tabs {
@@ -1838,7 +1790,7 @@ textarea {
   }
 
   .metric-card {
-    min-height: 118px;
+    min-height: 104px;
   }
 
   .brand-heading img {
@@ -1848,8 +1800,7 @@ textarea {
 
 @media (max-width: 430px) {
   .priority-strip,
-  .client-summary,
-  .chart-layout {
+  .client-summary {
     grid-template-columns: 1fr;
   }
 
@@ -1984,10 +1935,6 @@ textarea {
   .button-row,
   .tabs,
   .agenda-item {
-    grid-template-columns: 1fr;
-  }
-
-  .chart-layout {
     grid-template-columns: 1fr;
   }
 

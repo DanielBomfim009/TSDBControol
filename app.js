@@ -22,11 +22,7 @@ const state = {
   selectedClientKey: null,
   editingLoanId: null,
   draft: null,
-  reportPeriod: "month",
-  charts: {
-    donut: null,
-    monthly: null
-  }
+  reportPeriod: "month"
 };
 
 const dom = {
@@ -268,6 +264,13 @@ function formatDate(value) {
 
 function formatPercent(value) {
   return Number(value || 0).toFixed(2).replace(".", ",") + "%";
+}
+
+function blurActiveControl() {
+  const active = document.activeElement;
+  if (active && ["INPUT", "TEXTAREA", "SELECT"].includes(active.tagName)) {
+    active.blur();
+  }
 }
 
 function initials(name) {
@@ -708,6 +711,7 @@ function render() {
 }
 
 function setScreen(screen) {
+  blurActiveControl();
   state.screen = screen;
   Object.entries(dom.screens).forEach(([key, element]) => {
     element.classList.toggle("is-active", key === screen);
@@ -715,10 +719,6 @@ function setScreen(screen) {
   dom.navItems.forEach((item) => {
     item.classList.toggle("is-active", item.dataset.nav === screen);
   });
-
-  if (screen === "dashboard" || screen === "reports") {
-    setTimeout(renderCharts, 40);
-  }
 }
 
 function renderHeader(title, subtitle, backAction, actions = "") {
@@ -736,7 +736,6 @@ function renderHeader(title, subtitle, backAction, actions = "") {
               </div>`
             : `<h1>${title}</h1>`
         }
-        ${subtitle ? `<p>${subtitle}</p>` : ""}
       </div>
       <div class="header-actions">${actions}</div>
     </header>
@@ -760,7 +759,6 @@ function renderDashboard() {
         <span class="eyebrow">Carteira</span>
         <h2>Saldo disponível</h2>
         <strong>${formatCurrency(metrics.walletAvailable)}</strong>
-        <p>Esse valor diminui ao cadastrar empréstimos e aumenta quando pagamentos são registrados.</p>
       </div>
       <button class="button button-secondary" type="button" data-action="wallet">
         <i class="fa-solid fa-vault"></i>
@@ -787,7 +785,6 @@ function renderDashboard() {
       <div class="section-head">
         <div>
           <h2>Resumo geral</h2>
-          <p>Carteira atualizada automaticamente</p>
         </div>
       </div>
       <div class="metric-grid">
@@ -800,33 +797,23 @@ function renderDashboard() {
 
     <section class="section-block">
       <div class="action-grid">
-        ${actionCard("Novo empréstimo", "Cadastro com cálculo em tempo real", "fa-plus", "new-loan")}
-        ${actionCard("Clientes", "Lista limpa e detalhes sob demanda", "fa-users", "clients")}
-        ${actionCard("Empréstimos", "Lista, detalhes e cobranças", "fa-wallet", "loans")}
-        ${actionCard("Agenda", "Calendário de vencimentos e cobranças", "fa-calendar-days", "calendar")}
+        ${actionCard("Novo empréstimo", "", "fa-plus", "new-loan")}
+        ${actionCard("Clientes", "", "fa-users", "clients")}
+        ${actionCard("Empréstimos", "", "fa-wallet", "loans")}
+        ${actionCard("Agenda", "", "fa-calendar-days", "calendar")}
       </div>
     </section>
 
     <section class="section-block panel-card">
       <div class="section-head">
         <div>
-          <h3>Visão geral</h3>
-          <p>Distribuição atual da carteira</p>
+          <h3>Status da carteira</h3>
         </div>
       </div>
-      <div class="chart-layout">
-        <div class="donut-frame">
-          <canvas id="donut-chart"></canvas>
-          <div class="donut-label">
-            <span>Aberto</span>
-            <strong>${formatCurrency(metrics.totalReceivable)}</strong>
-          </div>
-        </div>
-        <div class="legend-list">
-          ${legendRow("Em dia", metrics.totalOnTime, "green")}
-          ${legendRow("Atrasados", metrics.totalOverdue, "red")}
-          ${legendRow("Pagos", metrics.totalPaid, "blue")}
-        </div>
+      <div class="status-list">
+        ${legendRow("Em dia", metrics.totalOnTime, "green")}
+        ${legendRow("Atrasados", metrics.totalOverdue, "red")}
+        ${legendRow("Pagos", metrics.totalPaid, "blue")}
       </div>
     </section>
 
@@ -834,7 +821,6 @@ function renderDashboard() {
       <div class="section-head">
         <div>
           <h3>Hoje e atrasados</h3>
-          <p>Fila enxuta para agir rápido</p>
         </div>
         <button class="link-button" type="button" data-action="calendar">Ver agenda</button>
       </div>
@@ -861,7 +847,6 @@ function metricCard(title, value, caption, tone, icon, action) {
       <span class="metric-icon ${tone}"><i class="fa-solid ${icon}"></i></span>
       <span>${title}</span>
       <strong>${typeof value === "number" ? formatCurrency(value) : value}</strong>
-      <small>${caption}</small>
     </button>
   `;
 }
@@ -872,7 +857,6 @@ function actionCard(title, text, icon, action) {
       <i class="fa-solid ${icon}"></i>
       <span>
         <strong>${title}</strong>
-        <span>${text}</span>
       </span>
     </button>
   `;
@@ -913,7 +897,6 @@ function renderWallet() {
       <div>
         <span class="eyebrow">Saldo disponível</span>
         <strong>${formatCurrency(metrics.walletAvailable)}</strong>
-        <p>Controle o dinheiro livre para emprestar. Cada novo empréstimo reduz o saldo e cada pagamento recebido aumenta automaticamente.</p>
       </div>
       <button class="button button-primary" type="button" data-action="settings">
         <i class="fa-solid fa-pen-to-square"></i>
@@ -934,7 +917,6 @@ function renderWallet() {
       <div class="section-head">
         <div>
           <h3>Movimentações da carteira</h3>
-          <p>Histórico automático para explicar cada mudança no saldo.</p>
         </div>
       </div>
       <div class="movement-list">
@@ -993,7 +975,7 @@ function renderClients() {
   dom.screens.clients.innerHTML = `
     ${renderHeader(
       "Clientes",
-      "Lista limpa por cliente. Toque para ver detalhes completos.",
+      "",
       "dashboard",
       `<button class="icon-button" type="button" data-action="reset-client-search" aria-label="Limpar busca"><i class="fa-solid fa-filter-circle-xmark"></i></button>`
     )}
@@ -1026,8 +1008,7 @@ function renderClients() {
       <section class="section-block panel-card quiet-panel">
         <div class="section-head">
           <div>
-            <h3>Detalhes sob demanda</h3>
-            <p>Selecione um cliente acima para abrir valores, datas, empréstimos e histórico sem poluir a lista principal.</p>
+            <h3>Selecione um cliente</h3>
           </div>
         </div>
       </section>
@@ -1140,7 +1121,7 @@ function renderLoans() {
   dom.screens.loans.innerHTML = `
     ${renderHeader(
       "Meus empréstimos",
-      "Filtros, busca, detalhes e cobrança.",
+      "",
       "dashboard",
       `<button class="icon-button" type="button" data-action="reset-filter" aria-label="Limpar filtros"><i class="fa-solid fa-filter-circle-xmark"></i></button>`
     )}
@@ -1165,8 +1146,7 @@ function renderLoans() {
       <section class="section-block panel-card quiet-panel">
         <div class="section-head">
           <div>
-            <h3>Detalhes sob demanda</h3>
-            <p>Selecione um empréstimo na lista para ver valores, juros, pagamentos e ações.</p>
+            <h3>Selecione um empréstimo</h3>
           </div>
         </div>
       </section>
@@ -1235,7 +1215,6 @@ function renderLoanCard(loan) {
 
 function renderLoanDetail(loan) {
   const meta = statusMeta(loan);
-  const lateProjection = loan.balance + loan.totalOriginal * (parseNumber(loan.dailyLateRate) / 100) * 3;
 
   return `
     <section class="section-block panel-card loan-detail">
@@ -1261,11 +1240,6 @@ function renderLoanDetail(loan) {
         ${detailLine("Data do empréstimo", formatDate(loan.issueDate))}
         ${detailLine("Vencimento", formatDate(loan.dueDate))}
         ${detailLine("Juros por atraso", formatPercent(loan.dailyLateRate) + " ao dia")}
-      </div>
-
-      <div class="late-box">
-        <h4>Projeção de atraso</h4>
-        <p>Se permanecer aberto por mais 3 dias, o total estimado será ${formatCurrency(lateProjection)}.</p>
       </div>
 
       <div class="finance-strip">
@@ -1395,7 +1369,7 @@ function renderNewLoan() {
   dom.screens.newLoan.innerHTML = `
     ${renderHeader(
       isEditing ? "Editar empréstimo" : "Novo empréstimo",
-      "Cálculo em tempo real com juros e multa automática.",
+      "",
       "loans",
       `<button class="icon-button" type="button" data-action="apply-defaults" aria-label="Usar padrões"><i class="fa-solid fa-wand-magic-sparkles"></i></button>`
     )}
@@ -1403,10 +1377,9 @@ function renderNewLoan() {
     <form class="form-panel loan-form-panel" id="loan-form">
       <section class="preview-card preview-card-highlight">
         <div class="preview-hero">
-          <span class="eyebrow">Prévia automática</span>
+          <span class="eyebrow">Prévia</span>
           <h3>Total a receber</h3>
           <strong data-preview="total">${formatCurrency(preview.totalOriginal)}</strong>
-          <small>Atualizado conforme valor, juros e datas informadas.</small>
         </div>
         <div class="preview-grid">
           ${previewItem("Juros", formatCurrency(preview.interestAmount), "interest")}
@@ -1421,7 +1394,6 @@ function renderNewLoan() {
           <i class="fa-solid fa-user-check"></i>
           <div>
             <h3>Cliente</h3>
-            <p>Dados básicos para identificar e cobrar a pessoa certa.</p>
           </div>
         </div>
         <label class="field">
@@ -1439,7 +1411,6 @@ function renderNewLoan() {
           <i class="fa-solid fa-coins"></i>
           <div>
             <h3>Valores</h3>
-            <p>O sistema calcula juros, total e impacto no saldo automaticamente.</p>
           </div>
         </div>
         <div class="form-grid">
@@ -1463,7 +1434,6 @@ function renderNewLoan() {
           <i class="fa-solid fa-calendar-check"></i>
           <div>
             <h3>Datas e observações</h3>
-            <p>Vencimentos e histórico ficam organizados no cliente.</p>
           </div>
         </div>
         <div class="form-grid">
@@ -1592,6 +1562,7 @@ function previewItem(label, value, key) {
 
 function saveLoanFromForm(event) {
   event.preventDefault();
+  blurActiveControl();
   const data = new FormData(event.currentTarget);
   const existing = state.editingLoanId ? state.data.loans.find((loan) => loan.id === state.editingLoanId) : null;
   const payload = {
@@ -1662,7 +1633,7 @@ function renderCalendar() {
     .slice(0, 12);
 
   dom.screens.calendar.innerHTML = `
-    ${renderHeader("Agenda", "Vencimentos, atrasos e cobranças do dia.", "dashboard")}
+    ${renderHeader("Agenda", "", "dashboard")}
 
     <section class="section-block calendar-hero">
       <div class="calendar-day">
@@ -1671,9 +1642,8 @@ function renderCalendar() {
         <small>${new Date().toLocaleDateString("pt-BR", { month: "long" })}</small>
       </div>
       <div>
-        <span class="eyebrow">Agenda automática</span>
+        <span class="eyebrow">Agenda</span>
         <h2>${todayLoans.length ? `${todayLoans.length} vencendo hoje` : "Nenhum vencimento hoje"}</h2>
-        <p>${overdue.length ? `${overdue.length} operação(ões) exigem cobrança.` : "Sem atrasos pendentes agora."}</p>
       </div>
     </section>
 
@@ -1731,7 +1701,7 @@ function renderReports() {
   const periodStats = getPeriodStats();
 
   dom.screens.reports.innerHTML = `
-    ${renderHeader("Relatórios", "Lucro, recebimentos, atrasos e evolução mensal.", "dashboard")}
+    ${renderHeader("Relatórios", "", "dashboard")}
 
     <div class="period-pills" role="tablist" aria-label="Período do relatório">
       ${periodButton("today", "Hoje")}
@@ -1756,15 +1726,6 @@ function renderReports() {
 
     <section class="section-block panel-card">
       <div class="section-head">
-        <h3>Evolução mensal</h3>
-      </div>
-      <div class="line-chart-box">
-        <canvas id="monthly-chart"></canvas>
-      </div>
-    </section>
-
-    <section class="section-block panel-card">
-      <div class="section-head">
         <h3>Resumo por status</h3>
       </div>
       <div class="status-list">
@@ -1778,7 +1739,6 @@ function renderReports() {
       <div class="section-head">
         <div>
           <h3>Clientes em destaque</h3>
-          <p>Maiores saldos e riscos para acompanhar.</p>
         </div>
       </div>
       <div class="client-loan-list">
@@ -1823,13 +1783,12 @@ function periodButton(period, label) {
 
 function renderSettings() {
   dom.screens.settings.innerHTML = `
-    ${renderHeader("Configurações", "Padrões, backup e segurança.", "dashboard")}
+    ${renderHeader("Configurações", "", "dashboard")}
 
     <form class="form-panel" id="settings-form">
       <section class="settings-group">
         <div>
           <h3>Carteira</h3>
-          <p>Defina quanto existe disponível para novos empréstimos.</p>
         </div>
         <label class="field">
           <span>Saldo disponível</span>
@@ -1840,15 +1799,14 @@ function renderSettings() {
       <section class="settings-group">
         <div>
           <h3>Regras financeiras</h3>
-          <p>Padrões usados ao cadastrar novos empréstimos.</p>
         </div>
       <div class="form-grid">
         <label class="field">
-          <span>Juros padrao (%)</span>
+          <span>Juros padrão (%)</span>
           <input type="number" name="defaultInterestRate" min="0" step="0.01" value="${state.settings.defaultInterestRate}" />
         </label>
         <label class="field">
-          <span>Multa padrao (% ao dia)</span>
+          <span>Multa padrão (% ao dia)</span>
           <input type="number" name="defaultDailyLateRate" min="0" step="0.01" value="${state.settings.defaultDailyLateRate}" />
         </label>
       </div>
@@ -1857,7 +1815,6 @@ function renderSettings() {
       <section class="settings-group">
         <div>
           <h3>Segurança</h3>
-          <p>Proteja o acesso local neste navegador.</p>
         </div>
       <section class="settings-security">
         <label class="switch-row">
@@ -1881,11 +1838,11 @@ function renderSettings() {
 
     <section class="section-block">
       <div class="action-grid">
-        ${actionCard("Exportar backup", "Baixar JSON com a carteira atual", "fa-download", "export")}
-        ${actionCard("Exportar CSV", "Planilha simples para conferência externa", "fa-file-csv", "export-csv")}
-        ${actionCard("Importar backup", "Restaurar arquivo JSON", "fa-upload", "import")}
-        ${actionCard("Limpar dados", "Apagar todos os empréstimos salvos", "fa-trash", "clear-data")}
-        ${actionCard("Bloquear agora", "Exigir PIN imediatamente", "fa-lock", "lock-app")}
+        ${actionCard("Exportar backup", "", "fa-download", "export")}
+        ${actionCard("Exportar CSV", "", "fa-file-csv", "export-csv")}
+        ${actionCard("Importar backup", "", "fa-upload", "import")}
+        ${actionCard("Limpar dados", "", "fa-trash", "clear-data")}
+        ${actionCard("Bloquear agora", "", "fa-lock", "lock-app")}
       </div>
       <input class="hidden" type="file" id="import-file" accept="application/json" />
     </section>
@@ -1894,7 +1851,6 @@ function renderSettings() {
       <div class="section-head">
         <div>
           <h3>Segurança dos dados</h3>
-          <p>O app continua local e privado. Use backup JSON para trocar de aparelho.</p>
         </div>
       </div>
       <div class="status-list">
@@ -1919,7 +1875,6 @@ function renderDrawer() {
       </div>
       <div>
         <strong>TSDB Empréstimos</strong>
-        <span>Carteira premium</span>
       </div>
       <button class="icon-button" type="button" data-action="close-drawer" aria-label="Fechar menu">
         <i class="fa-solid fa-xmark"></i>
@@ -1929,27 +1884,26 @@ function renderDrawer() {
     <section class="drawer-balance">
       <span>Saldo disponível</span>
       <strong>${formatCurrency(metrics.walletAvailable)}</strong>
-      <small>${metrics.active.length} operação(ões) ativa(s)</small>
     </section>
 
     <nav class="drawer-groups" aria-label="Opções do aplicativo">
       ${drawerGroup("Carteira", "fa-vault", true, [
-        drawerButton("dashboard", "Início", "Painel principal", "fa-house"),
-        drawerButton("wallet", "Carteira", "Saldo e movimentações", "fa-vault"),
-        drawerButton("settings", "Saldo disponível", "Ajustar carteira", "fa-coins"),
-        drawerButton("reports", "Relatórios", "Indicadores e lucro", "fa-chart-column")
+        drawerButton("dashboard", "Início", "", "fa-house"),
+        drawerButton("wallet", "Carteira", "", "fa-vault"),
+        drawerButton("settings", "Saldo disponível", "", "fa-coins"),
+        drawerButton("reports", "Relatórios", "", "fa-chart-column")
       ])}
       ${drawerGroup("Operações", "fa-briefcase", false, [
-        drawerButton("new-loan", "Novo empréstimo", "Cadastrar operação", "fa-plus"),
-        drawerButton("clients", "Clientes", "Lista limpa por pessoa", "fa-users"),
-        drawerButton("loans", "Empréstimos", "Lista e cobranças", "fa-wallet"),
-        drawerButton("calendar", "Agenda", "Vencimentos", "fa-calendar-days")
+        drawerButton("new-loan", "Novo empréstimo", "", "fa-plus"),
+        drawerButton("clients", "Clientes", "", "fa-users"),
+        drawerButton("loans", "Empréstimos", "", "fa-wallet"),
+        drawerButton("calendar", "Agenda", "", "fa-calendar-days")
       ])}
       ${drawerGroup("Dados e segurança", "fa-shield-halved", false, [
-        drawerButton("export", "Backup JSON", "Exportar carteira", "fa-download"),
-        drawerButton("export-csv", "Exportar CSV", "Baixar planilha", "fa-file-csv"),
-        drawerButton("import", "Importar JSON", "Restaurar backup", "fa-upload"),
-        drawerButton("lock-app", "Bloquear", state.settings.pinEnabled ? "Exigir PIN" : "Ative o PIN nos ajustes", "fa-lock")
+        drawerButton("export", "Backup JSON", "", "fa-download"),
+        drawerButton("export-csv", "Exportar CSV", "", "fa-file-csv"),
+        drawerButton("import", "Importar JSON", "", "fa-upload"),
+        drawerButton("lock-app", "Bloquear", "", "fa-lock")
       ])}
     </nav>
   `;
@@ -1975,7 +1929,6 @@ function drawerButton(action, title, text, icon) {
       <i class="fa-solid ${icon}"></i>
       <span>
         <strong>${title}</strong>
-        <small>${text}</small>
       </span>
     </button>
   `;
@@ -2091,6 +2044,7 @@ function closeModal(id) {
 
 function submitPayment(event) {
   event.preventDefault();
+  blurActiveControl();
   const data = new FormData(event.currentTarget);
   const loanId = data.get("loanId");
   const selectedLoan = getLoan(loanId);
@@ -2416,6 +2370,7 @@ function closeDrawer() {
 
 async function saveSettingsFromForm(event) {
   event.preventDefault();
+  blurActiveControl();
   const data = new FormData(event.currentTarget);
   const previousWallet = getWalletAvailable();
   const nextWallet = parseNumber(data.get("walletAvailable"));
@@ -2536,126 +2491,6 @@ function clearDraft() {
   renderNewLoan();
 }
 
-function renderCharts() {
-  if (typeof Chart === "undefined") {
-    return;
-  }
-
-  const metrics = getMetrics();
-  const donut = document.querySelector("#donut-chart");
-  const monthly = document.querySelector("#monthly-chart");
-
-  if (donut) {
-    if (state.charts.donut) {
-      state.charts.donut.destroy();
-    }
-
-    state.charts.donut = new Chart(donut, {
-      type: "doughnut",
-      data: {
-        labels: ["Em dia", "Atrasados", "Pagos"],
-        datasets: [
-          {
-            data: [metrics.totalOnTime, metrics.totalOverdue, metrics.totalPaid],
-            backgroundColor: ["#f0bd3d", "#ff654e", "#8d7c55"],
-            borderWidth: 0
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: "72%",
-        plugins: {
-          legend: { display: false }
-        }
-      }
-    });
-  }
-
-  if (monthly) {
-    if (state.charts.monthly) {
-      state.charts.monthly.destroy();
-    }
-
-    const series = monthlySeries();
-    state.charts.monthly = new Chart(monthly, {
-      type: "line",
-      data: {
-        labels: series.labels,
-        datasets: [
-          {
-            label: "Recebido",
-            data: series.values,
-            borderColor: "#f0bd3d",
-            backgroundColor: "rgba(240, 189, 61, 0.16)",
-            borderWidth: 3,
-            fill: true,
-            tension: 0.36,
-            pointRadius: 3,
-            pointBackgroundColor: "#f0bd3d"
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false }
-        },
-        scales: {
-          x: {
-            grid: { color: "rgba(244,199,93,0.09)" },
-            ticks: { color: "#c8b987" }
-          },
-          y: {
-            grid: { color: "rgba(244,199,93,0.09)" },
-            ticks: {
-              color: "#c8b987",
-              callback: (value) => formatCurrency(value).replace(",00", "")
-            }
-          }
-        }
-      }
-    });
-  }
-}
-
-function monthlySeries() {
-  const buckets = new Map();
-
-  getLoans().forEach((loan) => {
-    (loan.payments || []).forEach((payment) => {
-      const date = parseDate(payment.paidAt);
-      const key = String(date.getMonth() + 1).padStart(2, "0") + "/" + String(date.getFullYear()).slice(2);
-      buckets.set(key, (buckets.get(key) || 0) + parseNumber(payment.amount));
-    });
-  });
-
-  if (!buckets.size) {
-    const labels = [];
-    const values = [];
-    for (let index = 5; index >= 0; index -= 1) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - index);
-      labels.push(String(date.getMonth() + 1).padStart(2, "0") + "/" + String(date.getFullYear()).slice(2));
-      values.push(0);
-    }
-    return { labels, values };
-  }
-
-  const entries = Array.from(buckets.entries()).sort((a, b) => {
-    const [monthA, yearA] = a[0].split("/");
-    const [monthB, yearB] = b[0].split("/");
-    return Number("20" + yearA + monthA) - Number("20" + yearB + monthB);
-  });
-
-  return {
-    labels: entries.map(([label]) => label),
-    values: entries.map(([, value]) => value)
-  };
-}
-
 function bindEvents() {
   dom.navItems.forEach((item) => {
     item.addEventListener("click", () => {
@@ -2741,7 +2576,6 @@ function bindEvents() {
     if (action === "set-report-period") {
       state.reportPeriod = trigger.dataset.period || "month";
       renderReports();
-      setTimeout(renderCharts, 40);
     }
 
     if (action === "reset-filter") {
