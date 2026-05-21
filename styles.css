@@ -1662,6 +1662,46 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.renewal-card {
+  max-height: min(88vh, 760px);
+}
+
+.renewal-preview {
+  display: grid;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid rgba(244, 199, 93, 0.24);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at top right, rgba(244, 199, 93, 0.16), transparent 38%),
+    rgba(244, 199, 93, 0.055);
+  overflow: hidden;
+}
+
+.renewal-preview-hero {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.renewal-preview-hero strong {
+  color: var(--gold-main);
+  font-size: clamp(1.35rem, 6vw, 1.9rem);
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.renewal-preview-hero small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.renewal-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .empty-state {
   padding: 16px;
   border: 1px dashed var(--line-strong);
@@ -2299,7 +2339,8 @@ textarea {
   .reports-hero,
   .donut-layout,
   .preview-card-highlight .preview-grid,
-  .preview-mini-grid {
+  .preview-mini-grid,
+  .renewal-preview-grid {
     grid-template-columns: 1fr;
   }
 

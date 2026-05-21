@@ -20,7 +20,7 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260521-live-metrics-layout-v1" />
+    <link rel="stylesheet" href="./styles.css?v=20260521-renewal-v1" />
   </head>
   <body>
     <div class="loading-screen" id="loading-screen" aria-hidden="true">
@@ -133,6 +133,54 @@
       </form>
     </div>
 
+    <div class="modal" id="renewal-modal" aria-hidden="true">
+      <div class="modal-backdrop" data-action="close-modal" data-modal="renewal-modal"></div>
+      <form class="modal-card renewal-card" id="renewal-form">
+        <div class="modal-handle"></div>
+        <header class="modal-header">
+          <div>
+            <h2>Renovar empréstimo</h2>
+            <p>Registre o valor recebido agora e gere um novo ciclo com juros sobre o saldo restante.</p>
+          </div>
+          <button class="icon-button" type="button" data-action="close-modal" data-modal="renewal-modal" aria-label="Fechar">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </header>
+
+        <input type="hidden" name="loanId" />
+        <section class="renewal-preview" id="renewal-preview" aria-live="polite"></section>
+
+        <div class="form-grid">
+          <label class="field">
+            <span>Data da renovação</span>
+            <input type="date" name="renewedAt" required />
+          </label>
+          <label class="field">
+            <span>Valor recebido agora</span>
+            <input type="text" name="paidAmount" inputmode="decimal" data-money placeholder="0,00" />
+          </label>
+          <label class="field">
+            <span>Novo vencimento</span>
+            <input type="date" name="newDueDate" required />
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Observações</span>
+          <textarea name="notes" rows="3" placeholder="Ex.: cliente pagou somente os juros e renovou por mais 30 dias"></textarea>
+        </label>
+
+        <footer class="modal-actions">
+          <button class="button button-ghost" type="button" data-action="close-modal" data-modal="renewal-modal">
+            Cancelar
+          </button>
+          <button class="button button-primary" type="submit">
+            Confirmar renovação
+          </button>
+        </footer>
+      </form>
+    </div>
+
     <div class="modal" id="loan-menu-modal" aria-hidden="true">
       <div class="modal-backdrop" data-action="close-modal" data-modal="loan-menu-modal"></div>
       <div class="modal-card">
@@ -171,6 +219,6 @@
       </form>
     </div>
 
-    <script src="./app.js?v=20260521-live-metrics-layout-v1" defer></script>
+    <script src="./app.js?v=20260521-renewal-v1" defer></script>
   </body>
 </html>

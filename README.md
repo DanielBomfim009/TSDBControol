@@ -29,6 +29,7 @@ Aplicativo financeiro premium para controle pessoal de empréstimos, juros, atra
 - Agenda de vencimentos, atrasos e cobranças.
 - Menu hambúrguer com atalhos operacionais.
 - Registro de pagamentos.
+- Renovação de empréstimos com pagamento parcial, novo principal recalculado e novo vencimento.
 - Histórico e auditoria por empréstimo.
 - Relatórios com gráficos premium em SVG/CSS, sem depender de build.
 - Períodos de relatório: hoje, 7 dias, mês, ano e tudo.

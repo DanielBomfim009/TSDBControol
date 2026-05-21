@@ -47,6 +47,9 @@ const dom = {
   paymentForm: document.querySelector("#payment-form"),
   loanMenuModal: document.querySelector("#loan-menu-modal"),
   loanMenuActions: document.querySelector("#loan-menu-actions"),
+  renewalModal: document.querySelector("#renewal-modal"),
+  renewalForm: document.querySelector("#renewal-form"),
+  renewalPreview: document.querySelector("#renewal-preview"),
   pinModal: document.querySelector("#pin-modal"),
   pinForm: document.querySelector("#pin-form"),
   pinInput: document.querySelector("#pin-input"),
@@ -105,12 +108,14 @@ function normalizeData(data) {
       name: String(loan.name || loan.clientName || "Cliente sem nome"),
       phone: String(loan.phone || ""),
       principal: parseNumber(loan.principal),
+      originalPrincipal: parseNumber(loan.originalPrincipal || loan.principal),
       interestRate: parseNumber(loan.interestRate ?? loan.rate),
       dailyLateRate: parseNumber(loan.dailyLateRate ?? loan.lateFeeRate),
       issueDate: loan.issueDate || loan.issuedAt || todayIso(),
       dueDate: loan.dueDate || todayIso(),
       notes: String(loan.notes || ""),
       payments: (loan.payments || []).map(normalizePayment),
+      renewals: (loan.renewals || []).map(normalizeRenewal).filter(Boolean),
       createdAt: loan.createdAt || new Date().toISOString(),
       updatedAt: loan.updatedAt || loan.editedAt || null
     }))
@@ -128,12 +133,14 @@ function migrateLegacyData(legacy) {
       name: client ? client.name : loan.name || "Cliente sem nome",
       phone: client ? client.phone || "" : loan.phone || "",
       principal: parseNumber(loan.principal),
+      originalPrincipal: parseNumber(loan.originalPrincipal || loan.principal),
       interestRate: parseNumber(loan.interestRate ?? loan.rate),
       dailyLateRate: parseNumber(loan.dailyLateRate ?? loan.lateFeeRate),
       issueDate: loan.issueDate || loan.issuedAt || todayIso(),
       dueDate: loan.dueDate || todayIso(),
       notes: loan.notes || "",
       payments: payments.filter((payment) => payment.loanId === loan.id).map(normalizePayment),
+      renewals: (loan.renewals || []).map(normalizeRenewal).filter(Boolean),
       createdAt: loan.createdAt || new Date().toISOString(),
       updatedAt: loan.updatedAt || null
     };
@@ -149,6 +156,28 @@ function normalizePayment(payment) {
     amount: parseNumber(payment.amount),
     method: payment.method || "Pix",
     notes: payment.notes || ""
+  };
+}
+
+function normalizeRenewal(renewal) {
+  if (!renewal) {
+    return null;
+  }
+
+  return {
+    id: renewal.id || createId(),
+    renewedAt: renewal.renewedAt || renewal.date || todayIso(),
+    paidAmount: parseNumber(renewal.paidAmount),
+    profitReceived: parseNumber(renewal.profitReceived),
+    previousPaidAmount: parseNumber(renewal.previousPaidAmount),
+    previousProfitReceived: parseNumber(renewal.previousProfitReceived),
+    previousPrincipal: parseNumber(renewal.previousPrincipal),
+    previousTotalUpdated: parseNumber(renewal.previousTotalUpdated),
+    previousBalance: parseNumber(renewal.previousBalance),
+    nextPrincipal: parseNumber(renewal.nextPrincipal),
+    nextDueDate: renewal.nextDueDate || todayIso(),
+    notes: String(renewal.notes || ""),
+    previousPayments: (renewal.previousPayments || []).map(normalizePayment)
   };
 }
 
@@ -204,6 +233,25 @@ function futureIso(days) {
   return date.toISOString().slice(0, 10);
 }
 
+function addMonthsIso(value, months = 1) {
+  const source = parseDate(value || todayIso());
+  const day = source.getDate();
+  const target = new Date(source.getFullYear(), source.getMonth() + months, 1, 12);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(day, lastDay));
+  return target.toISOString().slice(0, 10);
+}
+
+function nextMonthlyDueDate(value) {
+  let next = addMonthsIso(value || todayIso(), 1);
+
+  while (parseDate(next) <= today()) {
+    next = addMonthsIso(next, 1);
+  }
+
+  return next;
+}
+
 function parseNumber(value) {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : 0;
@@ -220,6 +268,10 @@ function parseNumber(value) {
     .replace(",", ".");
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function roundMoney(value) {
+  return Math.round(parseNumber(value) * 100) / 100;
 }
 
 function formatMoneyInputValue(value) {
@@ -310,6 +362,16 @@ function escapeHtml(value) {
 
 function getComputedLoan(loan) {
   const principal = parseNumber(loan.principal);
+  const originalPrincipal = parseNumber(loan.originalPrincipal || loan.principal);
+  const renewals = (loan.renewals || []).map(normalizeRenewal).filter(Boolean);
+  const renewalPaidAmount = renewals.reduce(
+    (sum, renewal) => sum + parseNumber(renewal.previousPaidAmount) + parseNumber(renewal.paidAmount),
+    0
+  );
+  const renewalProfitReceived = renewals.reduce(
+    (sum, renewal) => sum + parseNumber(renewal.previousProfitReceived) + parseNumber(renewal.profitReceived),
+    0
+  );
   const interestAmount = principal * (parseNumber(loan.interestRate) / 100);
   const totalOriginal = principal + interestAmount;
   const payments = (loan.payments || []).slice().sort((a, b) => parseDate(a.paidAt) - parseDate(b.paidAt));
@@ -356,15 +418,19 @@ function getComputedLoan(loan) {
   const principalPaid = Math.min(paidAmount, principal);
   const principalOpen = status === "paid" ? 0 : Math.max(principal - principalPaid, 0);
   const profitOpen = status === "paid" ? 0 : Math.max(balance - principalOpen, 0);
+  const profitReceived = Math.max(Math.min(paidAmount, totalUpdated) - principal, 0);
 
   return {
     ...loan,
     principal,
+    originalPrincipal,
     interestAmount,
     totalOriginal,
     lateInterest,
     totalUpdated,
     paidAmount,
+    renewalPaidAmount,
+    totalPaidReceived: renewalPaidAmount + paidAmount,
     balance,
     principalPaid,
     principalOpen,
@@ -373,8 +439,11 @@ function getComputedLoan(loan) {
     remainingDays,
     status,
     settledAt,
+    renewals,
     profitProjected: totalOriginal - principal,
-    profitReceived: Math.max(Math.min(paidAmount, totalUpdated) - principal, 0)
+    profitReceived,
+    renewalProfitReceived,
+    totalProfitReceived: renewalProfitReceived + profitReceived
   };
 }
 
@@ -415,16 +484,16 @@ function getMetrics() {
     onTime,
     dueToday: loans.filter((loan) => loan.status === "due-today"),
     dueSoon: loans.filter((loan) => ["soon", "due-today", "on-time"].includes(loan.status) && loan.balance > 0).slice(0, 5),
-    totalPrincipal: loans.reduce((sum, loan) => sum + loan.principal, 0),
+    totalPrincipal: loans.reduce((sum, loan) => sum + loan.originalPrincipal, 0),
     openPrincipal: active.reduce((sum, loan) => sum + loan.principalOpen, 0),
     totalReceivable: active.reduce((sum, loan) => sum + loan.balance, 0),
     totalProjected: loans.reduce((sum, loan) => sum + loan.totalUpdated, 0),
-    totalPaid: loans.reduce((sum, loan) => sum + loan.paidAmount, 0),
+    totalPaid: loans.reduce((sum, loan) => sum + loan.totalPaidReceived, 0),
     totalOverdue: overdue.reduce((sum, loan) => sum + loan.balance, 0),
     totalOnTime: onTime.reduce((sum, loan) => sum + loan.balance, 0),
     profitProjected: loans.reduce((sum, loan) => sum + loan.profitProjected, 0),
     profitOpen: active.reduce((sum, loan) => sum + loan.profitOpen, 0),
-    profitReceived: loans.reduce((sum, loan) => sum + loan.profitReceived, 0),
+    profitReceived: loans.reduce((sum, loan) => sum + loan.totalProfitReceived, 0),
     walletAvailable: getWalletAvailable(),
     clients: clientNames.size,
     clientGroups,
@@ -473,12 +542,12 @@ function buildClientGroups(loans = getLoans()) {
       };
 
     current.loans.push(loan);
-    current.totalPrincipal += loan.principal;
+    current.totalPrincipal += loan.originalPrincipal;
     current.openPrincipal += loan.principalOpen;
-    current.totalPaid += loan.paidAmount;
+    current.totalPaid += loan.totalPaidReceived;
     current.balance += loan.balance;
     current.profitOpen += loan.profitOpen;
-    current.profitReceived += loan.profitReceived;
+    current.profitReceived += loan.totalProfitReceived;
     current.overdueCount += loan.status === "overdue" ? 1 : 0;
     current.activeCount += loan.status !== "paid" ? 1 : 0;
     current.paidCount += loan.status === "paid" ? 1 : 0;
@@ -685,16 +754,79 @@ function isDateInRange(value, range) {
   return date >= range.start && date <= range.end;
 }
 
+function getReceivedEvents(loans = getLoans()) {
+  return loans
+    .flatMap((loan) => {
+      const renewalEvents = (loan.renewals || []).flatMap((renewal) => {
+        const previousPayments = (renewal.previousPayments || []).length
+          ? (renewal.previousPayments || []).map((payment) => ({
+              ...payment,
+              loanId: loan.id,
+              loanName: loan.name,
+              principal: renewal.previousPrincipal,
+              source: "payment"
+            }))
+          : parseNumber(renewal.previousPaidAmount) > 0
+            ? [
+                {
+                  id: renewal.id + "-previous",
+                  paidAt: renewal.renewedAt,
+                  amount: renewal.previousPaidAmount,
+                  method: "Pagamento anterior",
+                  notes: "",
+                  loanId: loan.id,
+                  loanName: loan.name,
+                  principal: renewal.previousPrincipal,
+                  profitAmount: renewal.previousProfitReceived,
+                  source: "payment"
+                }
+              ]
+            : [];
+
+        const renewalPayment = parseNumber(renewal.paidAmount) > 0
+          ? [
+              {
+                id: renewal.id,
+                paidAt: renewal.renewedAt,
+                amount: renewal.paidAmount,
+                method: "Renovação",
+                notes: renewal.notes,
+                loanName: loan.name,
+                loanId: loan.id,
+                principal: renewal.previousPrincipal,
+                profitAmount: renewal.profitReceived,
+                source: "renewal"
+              }
+            ]
+          : [];
+
+        return [...previousPayments, ...renewalPayment];
+      });
+
+      const currentPayments = (loan.payments || []).map((payment) => ({
+        ...payment,
+        loanId: loan.id,
+        loanName: loan.name,
+        principal: loan.principal,
+        source: "payment"
+      }));
+
+      return [...renewalEvents, ...currentPayments];
+    })
+    .sort((a, b) => parseDate(b.paidAt) - parseDate(a.paidAt));
+}
+
+function getPaymentProfitAmount(payment) {
+  if (Number.isFinite(payment.profitAmount)) {
+    return parseNumber(payment.profitAmount);
+  }
+
+  return Math.max(parseNumber(payment.amount) - Math.min(parseNumber(payment.principal), parseNumber(payment.amount)), 0);
+}
+
 function getPeriodStats(period = state.reportPeriod) {
   const range = getPeriodRange(period);
-  const loans = getLoans();
-  const payments = loans.flatMap((loan) =>
-    (loan.payments || []).map((payment) => ({
-      ...payment,
-      loanName: loan.name,
-      principal: loan.principal
-    }))
-  );
+  const payments = getReceivedEvents();
   const periodPayments = payments.filter((payment) => isDateInRange(payment.paidAt, range));
   const received = periodPayments.reduce((sum, payment) => sum + parseNumber(payment.amount), 0);
   const count = periodPayments.length;
@@ -703,7 +835,7 @@ function getPeriodStats(period = state.reportPeriod) {
     received,
     count,
     averageTicket: count ? received / count : 0,
-    profitReceived: Math.max(received - periodPayments.reduce((sum, payment) => sum + Math.min(payment.principal, parseNumber(payment.amount)), 0), 0)
+    profitReceived: periodPayments.reduce((sum, payment) => sum + getPaymentProfitAmount(payment), 0)
   };
 }
 
@@ -731,17 +863,17 @@ function getMonthlySeries(months = 6) {
   const byKey = new Map(rows.map((row) => [row.key, row]));
 
   getLoans().forEach((loan) => {
-    const loanMonth = byKey.get(monthKey(loan.issueDate));
+    const loanMonth = byKey.get(monthKey(String(loan.createdAt || loan.issueDate).slice(0, 10)));
     if (loanMonth) {
-      loanMonth.lent += loan.principal;
+      loanMonth.lent += loan.originalPrincipal;
     }
+  });
 
-    (loan.payments || []).forEach((payment) => {
-      const paymentMonth = byKey.get(monthKey(payment.paidAt));
-      if (paymentMonth) {
-        paymentMonth.received += parseNumber(payment.amount);
-      }
-    });
+  getReceivedEvents().forEach((payment) => {
+    const paymentMonth = byKey.get(monthKey(payment.paidAt));
+    if (paymentMonth) {
+      paymentMonth.received += parseNumber(payment.amount);
+    }
   });
 
   return rows;
@@ -1429,6 +1561,7 @@ function renderLoanDetail(loan) {
       </header>
 
       <div class="detail-grid">
+        ${detailLine("Valor original", formatCurrency(loan.originalPrincipal))}
         ${detailLine("Valor emprestado", formatCurrency(loan.principal))}
         ${detailLine("Principal em aberto", formatCurrency(loan.principalOpen))}
         ${detailLine("Juros contratado", formatPercent(loan.interestRate))}
@@ -1437,6 +1570,7 @@ function renderLoanDetail(loan) {
         ${detailLine("Multa acumulada", formatCurrency(loan.lateInterest))}
         ${detailLine("Total atualizado", formatCurrency(loan.totalUpdated), "status-green")}
         ${detailLine("Saldo em aberto", formatCurrency(loan.balance))}
+        ${detailLine("Total recebido", formatCurrency(loan.totalPaidReceived))}
         ${detailLine("Data do empréstimo", formatDate(loan.issueDate))}
         ${detailLine("Vencimento", formatDate(loan.dueDate))}
         ${detailLine("Juros por atraso", formatPercent(loan.dailyLateRate) + " ao dia")}
@@ -1444,7 +1578,7 @@ function renderLoanDetail(loan) {
 
       <div class="finance-strip">
         ${miniStat("Lucro a receber", formatCurrency(loan.profitOpen), "green")}
-        ${miniStat("Lucro recebido", formatCurrency(loan.profitReceived), "blue")}
+        ${miniStat("Lucro recebido", formatCurrency(loan.totalProfitReceived), "blue")}
         ${miniStat("Dias atraso", String(loan.lateDays), loan.lateDays ? "red" : "green")}
       </div>
 
@@ -1463,6 +1597,10 @@ function renderLoanDetail(loan) {
         <button class="button button-secondary" type="button" data-action="whatsapp" data-loan-id="${loan.id}">
           <i class="fa-brands fa-whatsapp"></i>
           Cobrar
+        </button>
+        <button class="button button-secondary" type="button" data-action="open-renewal" data-loan-id="${loan.id}">
+          <i class="fa-solid fa-rotate-right"></i>
+          Renovar
         </button>
         <button class="button button-ghost" type="button" data-action="edit-loan" data-loan-id="${loan.id}">
           <i class="fa-solid fa-pen"></i>
@@ -1499,7 +1637,7 @@ function renderLoanHistory(loan) {
     {
       date: loan.createdAt,
       title: "Empréstimo criado",
-      text: formatCurrency(loan.principal),
+      text: formatCurrency(loan.originalPrincipal),
       tone: "green"
     },
     ...((loan.payments || []).map((payment) => ({
@@ -1507,6 +1645,18 @@ function renderLoanHistory(loan) {
       title: "Pagamento recebido",
       text: formatCurrency(payment.amount) + " via " + payment.method,
       tone: "blue"
+    }))),
+    ...((loan.renewals || []).map((renewal) => ({
+      date: renewal.renewedAt,
+      title: "Renovação registrada",
+      text:
+        "Recebido " +
+        formatCurrency(renewal.paidAmount) +
+        " · novo principal " +
+        formatCurrency(renewal.nextPrincipal) +
+        " · vence " +
+        formatDate(renewal.nextDueDate),
+      tone: "yellow"
     }))),
     ...getAudit(loan.id).filter((entry) => entry.type !== "create").map((entry) => ({
       date: entry.createdAt,
@@ -1544,6 +1694,7 @@ function auditTitle(type) {
     create: "Cadastro",
     edit: "Edição",
     payment: "Pagamento",
+    renewal: "Renovação",
     delete: "Exclusão",
     import: "Importação",
     security: "Segurança"
@@ -1769,12 +1920,14 @@ function saveLoanFromForm(event) {
     name: String(data.get("name") || "").trim(),
     phone: String(data.get("phone") || "").trim(),
     principal: parseNumber(data.get("principal")),
+    originalPrincipal: existing ? parseNumber(existing.originalPrincipal || existing.principal) : parseNumber(data.get("principal")),
     interestRate: parseNumber(data.get("interestRate")),
     dailyLateRate: parseNumber(data.get("dailyLateRate")),
     issueDate: data.get("issueDate"),
     dueDate: data.get("dueDate"),
     notes: String(data.get("notes") || "").trim(),
     payments: existing ? existing.payments || [] : [],
+    renewals: existing ? existing.renewals || [] : [],
     createdAt: existing ? existing.createdAt : new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -2142,10 +2295,7 @@ function drawerButton(action, title, text, icon) {
 }
 
 function renderRecentPayments() {
-  const payments = getLoans()
-    .flatMap((loan) => (loan.payments || []).map((payment) => ({ ...payment, loanName: loan.name })))
-    .sort((a, b) => parseDate(b.paidAt) - parseDate(a.paidAt))
-    .slice(0, 4);
+  const payments = getReceivedEvents().slice(0, 4);
 
   if (!payments.length) {
     return emptyState("Nenhum pagamento registrado ainda.");
@@ -2157,7 +2307,7 @@ function renderRecentPayments() {
         <div class="panel-card">
           <div class="detail-line">
             <span>${escapeHtml(payment.loanName)} - ${formatDate(payment.paidAt)}</span>
-            <strong class="status-green">${formatCurrency(payment.amount)}</strong>
+            <strong class="status-green">${formatCurrency(payment.amount)}${payment.source === "renewal" ? " · renovado" : ""}</strong>
           </div>
         </div>
       `
@@ -2184,6 +2334,85 @@ function openPaymentModal(loanId) {
   openModal("payment-modal");
 }
 
+function getRenewalProjection(loan, paidAmount = 0, newDueDate = "") {
+  const received = Math.min(Math.max(parseNumber(paidAmount), 0), loan.balance);
+  const nextPrincipal = roundMoney(Math.max(loan.balance - received, 0));
+  const interestAmount = roundMoney(nextPrincipal * (parseNumber(loan.interestRate) / 100));
+  const totalOriginal = roundMoney(nextPrincipal + interestAmount);
+  const profitReceived = roundMoney(Math.min(received, loan.profitOpen));
+  const principalReduction = roundMoney(Math.max(received - loan.profitOpen, 0));
+
+  return {
+    received,
+    nextPrincipal,
+    interestAmount,
+    totalOriginal,
+    profitReceived,
+    principalReduction,
+    newDueDate
+  };
+}
+
+function renderRenewalPreview(loan, projection) {
+  if (!dom.renewalPreview) {
+    return;
+  }
+
+  dom.renewalPreview.innerHTML = `
+    <div class="renewal-preview-hero">
+      <span class="eyebrow">Novo ciclo</span>
+      <strong>${formatCurrency(projection.totalOriginal)}</strong>
+      <small>Total com juros para ${projection.newDueDate ? formatDate(projection.newDueDate) : "novo vencimento"}</small>
+    </div>
+    <div class="renewal-preview-grid">
+      ${previewItem("Saldo atual", formatCurrency(loan.balance), "wallet")}
+      ${previewItem("Pago agora", formatCurrency(projection.received), "payment")}
+      ${previewItem("Novo principal", formatCurrency(projection.nextPrincipal), "principal")}
+      ${previewItem("Juros novo ciclo", formatCurrency(projection.interestAmount), "interest")}
+      ${previewItem("Lucro recebido", formatCurrency(projection.profitReceived), "profit")}
+      ${previewItem("Abate principal", formatCurrency(projection.principalReduction), "principal")}
+    </div>
+  `;
+}
+
+function updateRenewalPreview() {
+  if (!dom.renewalForm) {
+    return;
+  }
+
+  const loan = getLoan(dom.renewalForm.loanId.value);
+  if (!loan) {
+    return;
+  }
+
+  renderRenewalPreview(
+    loan,
+    getRenewalProjection(loan, dom.renewalForm.paidAmount.value, dom.renewalForm.newDueDate.value)
+  );
+}
+
+function openRenewalModal(loanId) {
+  const loan = getLoan(loanId);
+
+  if (!loan || !dom.renewalForm) {
+    return;
+  }
+
+  if (loan.status === "paid" || loan.balance <= 0.01) {
+    alert("Este empréstimo já está quitado.");
+    return;
+  }
+
+  dom.renewalForm.loanId.value = loan.id;
+  dom.renewalForm.renewedAt.value = todayIso();
+  dom.renewalForm.paidAmount.value = formatMoneyInputValue(loan.profitOpen || 0);
+  dom.renewalForm.newDueDate.value = nextMonthlyDueDate(loan.dueDate);
+  dom.renewalForm.notes.value = "";
+  updateRenewalPreview();
+  closeModal("loan-menu-modal");
+  openModal("renewal-modal");
+}
+
 function openLoanMenu(loanId) {
   const loan = getLoan(loanId);
 
@@ -2195,6 +2424,10 @@ function openLoanMenu(loanId) {
     <button class="button button-primary" type="button" data-action="open-payment" data-loan-id="${loan.id}">
       <i class="fa-solid fa-circle-dollar-to-slot"></i>
       Receber pagamento
+    </button>
+    <button class="button button-secondary" type="button" data-action="open-renewal" data-loan-id="${loan.id}">
+      <i class="fa-solid fa-rotate-right"></i>
+      Renovar empréstimo
     </button>
     <button class="button button-secondary" type="button" data-action="whatsapp" data-loan-id="${loan.id}">
       <i class="fa-brands fa-whatsapp"></i>
@@ -2294,6 +2527,107 @@ function submitPayment(event) {
   closeModal("payment-modal");
   closeModal("loan-menu-modal");
   render();
+}
+
+function submitRenewal(event) {
+  event.preventDefault();
+  blurActiveControl();
+  const data = new FormData(event.currentTarget);
+  const loanId = data.get("loanId");
+  const selectedLoan = getLoan(loanId);
+  const rawLoan = state.data.loans.find((loan) => loan.id === loanId);
+  const paidAmount = roundMoney(data.get("paidAmount"));
+  const renewedAt = data.get("renewedAt");
+  const newDueDate = data.get("newDueDate");
+  const notes = String(data.get("notes") || "").trim();
+
+  if (!selectedLoan || !rawLoan) {
+    alert("Empréstimo não encontrado.");
+    return;
+  }
+
+  if (!renewedAt || !newDueDate) {
+    alert("Informe a data da renovação e o novo vencimento.");
+    return;
+  }
+
+  if (parseDate(newDueDate) <= parseDate(renewedAt)) {
+    alert("O novo vencimento precisa ser posterior à data da renovação.");
+    return;
+  }
+
+  if (paidAmount < 0 || paidAmount > selectedLoan.balance + 0.01) {
+    alert("Informe um valor pago entre zero e o saldo em aberto.");
+    return;
+  }
+
+  const projection = getRenewalProjection(selectedLoan, paidAmount, newDueDate);
+
+  if (projection.nextPrincipal <= 0.01) {
+    alert("O valor informado quita o empréstimo. Use Registrar pagamento para finalizar.");
+    return;
+  }
+
+  const previousPayments = (rawLoan.payments || []).map(normalizePayment);
+  const renewal = {
+    id: createId(),
+    renewedAt,
+    paidAmount: projection.received,
+    profitReceived: projection.profitReceived,
+    previousPaidAmount: selectedLoan.paidAmount,
+    previousProfitReceived: selectedLoan.profitReceived,
+    previousPrincipal: selectedLoan.principal,
+    previousTotalUpdated: selectedLoan.totalUpdated,
+    previousBalance: selectedLoan.balance,
+    nextPrincipal: projection.nextPrincipal,
+    nextDueDate: newDueDate,
+    notes,
+    previousPayments
+  };
+
+  state.data.loans = state.data.loans.map((loan) => {
+    if (loan.id !== loanId) {
+      return loan;
+    }
+
+    return {
+      ...loan,
+      principal: projection.nextPrincipal,
+      originalPrincipal: parseNumber(loan.originalPrincipal || loan.principal),
+      issueDate: renewedAt,
+      dueDate: newDueDate,
+      payments: [],
+      renewals: [...(loan.renewals || []), renewal],
+      updatedAt: new Date().toISOString()
+    };
+  });
+
+  addAudit(
+    "renewal",
+    "Renovação registrada: recebido " +
+      formatCurrency(projection.received) +
+      ", novo principal " +
+      formatCurrency(projection.nextPrincipal) +
+      " e vencimento em " +
+      formatDate(newDueDate) +
+      ".",
+    loanId
+  );
+
+  if (projection.received > 0) {
+    updateWalletAvailable(projection.received, {
+      type: "renewal",
+      label: "Renovação recebida de " + selectedLoan.name,
+      loanId
+    });
+  }
+
+  state.selectedLoanId = loanId;
+  saveData();
+  closeModal("renewal-modal");
+  closeModal("loan-menu-modal");
+  render();
+  setScreen("loans");
 }
 
 function editLoan(loanId) {
@@ -2409,7 +2743,7 @@ function printLoanDocument(loanId, type) {
     return;
   }
 
-  const latestPayment = (loan.payments || []).slice().sort((a, b) => parseDate(b.paidAt) - parseDate(a.paidAt))[0];
+  const latestPayment = getReceivedEvents([loan])[0];
 
   if (type === "receipt" && !latestPayment) {
     alert("Registre um pagamento antes de gerar recibo.");
@@ -2820,6 +3154,10 @@ function bindEvents() {
       openPaymentModal(loanId);
     }
 
+    if (action === "open-renewal") {
+      openRenewalModal(loanId);
+    }
+
     if (action === "open-loan-menu") {
       openLoanMenu(loanId);
     }
@@ -2898,11 +3236,14 @@ function bindEvents() {
   });
 
   dom.paymentForm.addEventListener("submit", submitPayment);
+  dom.renewalForm.addEventListener("submit", submitRenewal);
+  dom.renewalForm.addEventListener("input", updateRenewalPreview);
   dom.pinForm.addEventListener("submit", unlockApp);
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeModal("payment-modal");
+      closeModal("renewal-modal");
       closeModal("loan-menu-modal");
       closeDrawer();
     }
