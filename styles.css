@@ -47,9 +47,11 @@ body {
 
 body {
   min-width: 320px;
+  width: 100%;
   font-size: 15px;
   text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
 }
 
 button,
@@ -78,12 +80,14 @@ select,
 textarea {
   display: block;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 14px 14px;
   background: rgba(8, 7, 4, 0.86);
   color: var(--text);
+  line-height: 1.25;
 }
 
 h1,
@@ -99,6 +103,13 @@ input,
 select,
 textarea {
   min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+img,
+svg,
+canvas {
+  max-width: 100%;
 }
 
 input::placeholder,
@@ -211,8 +222,10 @@ textarea {
   position: relative;
   width: min(100%, 440px);
   height: min(920px, calc(100vh - 36px));
+  height: min(920px, calc(100svh - 36px));
   height: min(920px, calc(100dvh - 36px));
   min-height: min(680px, calc(100vh - 36px));
+  min-height: min(680px, calc(100svh - 36px));
   min-height: min(680px, calc(100dvh - 36px));
   display: flex;
   flex-direction: column;
@@ -230,6 +243,7 @@ textarea {
   z-index: 1;
   flex: 1;
   min-height: 0;
+  width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
@@ -242,7 +256,9 @@ textarea {
 
 .screen {
   display: none;
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
   animation: screen-in 190ms ease;
 }
 
@@ -415,6 +431,7 @@ textarea {
 .panel-card,
 .form-panel {
   min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background:
@@ -1110,6 +1127,56 @@ textarea {
   padding: 16px;
 }
 
+.loan-form-panel {
+  gap: 15px;
+  padding: 14px;
+}
+
+.form-section {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(244, 199, 93, 0.042);
+  overflow: hidden;
+}
+
+.form-section-title {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.form-section-title i {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(244, 199, 93, 0.13);
+  color: var(--gold-main);
+}
+
+.form-section-title h3,
+.form-section-title p {
+  margin: 0;
+}
+
+.form-section-title h3 {
+  font-size: 0.98rem;
+}
+
+.form-section-title p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
 .field {
   display: grid;
   gap: 8px;
@@ -1129,14 +1196,66 @@ textarea {
 }
 
 .preview-card {
+  min-width: 0;
+  max-width: 100%;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: rgba(244, 199, 93, 0.055);
+  overflow: hidden;
 }
 
 .preview-card h3 {
   margin: 0 0 12px;
+}
+
+.preview-card-highlight {
+  display: grid;
+  gap: 14px;
+  border-color: rgba(244, 199, 93, 0.3);
+  background:
+    radial-gradient(circle at top right, rgba(244, 199, 93, 0.16), transparent 36%),
+    linear-gradient(180deg, rgba(39, 31, 13, 0.86), rgba(12, 9, 4, 0.9));
+}
+
+.preview-hero {
+  min-width: 0;
+}
+
+.preview-hero h3,
+.preview-hero small,
+.preview-hero strong {
+  display: block;
+}
+
+.preview-hero h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.preview-hero strong {
+  margin-top: 6px;
+  color: var(--gold-main);
+  font-size: clamp(1.62rem, 8vw, 2.2rem);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.preview-hero small {
+  margin-top: 7px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.preview-item {
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid rgba(244, 199, 93, 0.11);
+  border-radius: 14px;
+  background: rgba(4, 3, 2, 0.34);
+  overflow: hidden;
 }
 
 .preview-item span,
@@ -1151,6 +1270,10 @@ textarea {
 
 .preview-item strong {
   margin-top: 6px;
+  color: var(--text);
+  font-size: clamp(0.92rem, 4vw, 1.05rem);
+  line-height: 1.18;
+  overflow-wrap: anywhere;
 }
 
 .empty-state {
@@ -1361,10 +1484,14 @@ textarea {
 }
 
 .nav-item span {
+  display: block;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
   font-size: 0.66rem;
+  line-height: 1.1;
 }
 
 .nav-item.is-active {
@@ -1670,6 +1797,7 @@ textarea {
   .app-shell {
     width: 100%;
     height: 100vh;
+    height: 100svh;
     height: 100dvh;
     min-height: 0;
     padding: 0;
@@ -1680,6 +1808,7 @@ textarea {
     width: 100%;
     max-width: none;
     height: 100vh;
+    height: 100svh;
     height: 100dvh;
     min-height: 0;
     border: 0;
@@ -1694,15 +1823,17 @@ textarea {
   }
 
   .bottom-nav {
-    left: 10px;
-    right: 10px;
-    bottom: calc(8px + env(safe-area-inset-bottom));
+    position: fixed;
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
     height: var(--nav-height);
     border-radius: 22px;
   }
 
   .fab-button {
-    bottom: calc(42px + env(safe-area-inset-bottom));
+    position: fixed;
+    bottom: calc(max(8px, env(safe-area-inset-bottom)) + 34px);
     border-width: 5px;
   }
 
@@ -1722,10 +1853,62 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .screen-header {
+    gap: 9px;
+    margin-bottom: 16px;
+  }
+
+  .screen-title h1,
+  .screen-title h2 {
+    font-size: clamp(1.08rem, 5.4vw, 1.32rem);
+  }
+
+  .screen-title p {
+    font-size: 0.84rem;
+  }
+
+  .icon-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
+  }
+
   .wallet-panel,
   .hero-panel,
   .calendar-hero {
     padding: 14px;
+  }
+
+  .form-panel,
+  .loan-form-panel,
+  .panel-card {
+    padding: 13px;
+  }
+
+  .form-section {
+    padding: 12px;
+  }
+
+  .field span {
+    font-size: 0.84rem;
+  }
+
+  input,
+  select,
+  textarea {
+    padding: 13px 12px;
+  }
+
+  .preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .button-row {
+    grid-template-columns: 1fr;
+  }
+
+  .preview-item {
+    padding: 10px;
   }
 
   .section-block {
@@ -1733,13 +1916,66 @@ textarea {
   }
 
   .bottom-nav {
-    left: 8px;
-    right: 8px;
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
     padding-inline: 8px;
   }
 
   .nav-item span {
     font-size: 0.61rem;
+  }
+
+  .tabs {
+    gap: 4px;
+  }
+
+  .tab-button {
+    padding-inline: 2px;
+    font-size: 0.76rem;
+  }
+
+  .loan-card,
+  .client-card,
+  .agenda-item {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .loan-side,
+  .client-side {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .agenda-item .icon-button {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .movement-item,
+  .client-loan-item {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-line {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .detail-line strong {
+    text-align: left;
+  }
+
+  .legend-row,
+  .status-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .legend-row strong,
+  .status-row strong {
+    grid-column: 2;
+    justify-self: start;
   }
 }
 
@@ -1773,6 +2009,10 @@ textarea {
 
   .agenda-date {
     width: 100%;
+  }
+
+  .agenda-item .icon-button {
+    grid-column: 1;
   }
 }
 

@@ -678,7 +678,7 @@ function statusMeta(loan) {
       icon: "fa-clock"
     },
     soon: {
-      label: "Proximo",
+      label: "Próximo",
       detail: "Vence em " + loan.remainingDays + " dia(s)",
       tone: "yellow",
       icon: "fa-hourglass-half"
@@ -1264,7 +1264,7 @@ function renderLoanDetail(loan) {
       </div>
 
       <div class="late-box">
-        <h4>Projecao de atraso</h4>
+        <h4>Projeção de atraso</h4>
         <p>Se permanecer aberto por mais 3 dias, o total estimado será ${formatCurrency(lateProjection)}.</p>
       </div>
 
@@ -1368,11 +1368,11 @@ function renderLoanHistory(loan) {
 function auditTitle(type) {
   const titles = {
     create: "Cadastro",
-    edit: "Edicao",
+    edit: "Edição",
     payment: "Pagamento",
-    delete: "Exclusao",
-    import: "Importacao",
-    security: "Seguranca"
+    delete: "Exclusão",
+    import: "Importação",
+    security: "Segurança"
   };
 
   return titles[type] || "Registro";
@@ -1397,59 +1397,89 @@ function renderNewLoan() {
       isEditing ? "Editar empréstimo" : "Novo empréstimo",
       "Cálculo em tempo real com juros e multa automática.",
       "loans",
-      `<button class="icon-button" type="button" data-action="apply-defaults" aria-label="Usar padroes"><i class="fa-solid fa-wand-magic-sparkles"></i></button>`
+      `<button class="icon-button" type="button" data-action="apply-defaults" aria-label="Usar padrões"><i class="fa-solid fa-wand-magic-sparkles"></i></button>`
     )}
 
-    <form class="form-panel" id="loan-form">
-      <label class="field">
-        <span>Nome</span>
-        <input name="name" type="text" value="${escapeHtml(draft.name)}" placeholder="Nome do devedor" required />
-      </label>
-      <label class="field">
-        <span>Telefone</span>
-        <input name="phone" type="tel" value="${escapeHtml(draft.phone)}" placeholder="(71) 99999-9999" />
-      </label>
-
-      <div class="form-grid">
-        <label class="field">
-          <span>Valor emprestado</span>
-          <input name="principal" type="text" inputmode="decimal" data-money value="${escapeHtml(draft.principal)}" placeholder="0,00" required />
-        </label>
-        <label class="field">
-          <span>Juros contratado (%)</span>
-          <input name="interestRate" type="text" inputmode="decimal" value="${escapeHtml(draft.interestRate)}" required />
-        </label>
-      </div>
-
-      <div class="form-grid">
-        <label class="field">
-          <span>Data do empréstimo</span>
-          <input name="issueDate" type="date" value="${draft.issueDate}" required />
-        </label>
-        <label class="field">
-          <span>Vencimento</span>
-          <input name="dueDate" type="date" value="${draft.dueDate}" required />
-        </label>
-      </div>
-
-      <label class="field">
-        <span>Juros por atraso (% ao dia)</span>
-        <input name="dailyLateRate" type="text" inputmode="decimal" value="${escapeHtml(draft.dailyLateRate)}" required />
-      </label>
-
-      <label class="field">
-        <span>Observações</span>
-        <textarea name="notes" rows="4" placeholder="Combinados, garantias, local de pagamento...">${escapeHtml(draft.notes)}</textarea>
-      </label>
-
-      <section class="preview-card">
-        <h3>Cálculo automático</h3>
+    <form class="form-panel loan-form-panel" id="loan-form">
+      <section class="preview-card preview-card-highlight">
+        <div class="preview-hero">
+          <span class="eyebrow">Prévia automática</span>
+          <h3>Total a receber</h3>
+          <strong data-preview="total">${formatCurrency(preview.totalOriginal)}</strong>
+          <small>Atualizado conforme valor, juros e datas informadas.</small>
+        </div>
         <div class="preview-grid">
           ${previewItem("Juros", formatCurrency(preview.interestAmount), "interest")}
-          ${previewItem("Total original", formatCurrency(preview.totalOriginal), "total")}
           ${previewItem("Saldo após cadastro", formatCurrency(preview.walletAfter), "wallet")}
           ${previewItem("Status previsto", preview.status, "status")}
+          ${previewItem("+3 dias de atraso", formatCurrency(preview.lateProjection), "late")}
         </div>
+      </section>
+
+      <section class="form-section">
+        <div class="form-section-title">
+          <i class="fa-solid fa-user-check"></i>
+          <div>
+            <h3>Cliente</h3>
+            <p>Dados básicos para identificar e cobrar a pessoa certa.</p>
+          </div>
+        </div>
+        <label class="field">
+          <span>Nome</span>
+          <input name="name" type="text" value="${escapeHtml(draft.name)}" placeholder="Nome do devedor" required />
+        </label>
+        <label class="field">
+          <span>Telefone</span>
+          <input name="phone" type="tel" value="${escapeHtml(draft.phone)}" placeholder="(71) 99999-9999" />
+        </label>
+      </section>
+
+      <section class="form-section">
+        <div class="form-section-title">
+          <i class="fa-solid fa-coins"></i>
+          <div>
+            <h3>Valores</h3>
+            <p>O sistema calcula juros, total e impacto no saldo automaticamente.</p>
+          </div>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>Valor emprestado</span>
+            <input name="principal" type="text" inputmode="decimal" data-money value="${escapeHtml(draft.principal)}" placeholder="0,00" required />
+          </label>
+          <label class="field">
+            <span>Juros contratado (%)</span>
+            <input name="interestRate" type="text" inputmode="decimal" value="${escapeHtml(draft.interestRate)}" required />
+          </label>
+        </div>
+        <label class="field">
+          <span>Juros por atraso (% ao dia)</span>
+          <input name="dailyLateRate" type="text" inputmode="decimal" value="${escapeHtml(draft.dailyLateRate)}" required />
+        </label>
+      </section>
+
+      <section class="form-section">
+        <div class="form-section-title">
+          <i class="fa-solid fa-calendar-check"></i>
+          <div>
+            <h3>Datas e observações</h3>
+            <p>Vencimentos e histórico ficam organizados no cliente.</p>
+          </div>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>Data do empréstimo</span>
+            <input name="issueDate" type="date" value="${draft.issueDate}" required />
+          </label>
+          <label class="field">
+            <span>Vencimento</span>
+            <input name="dueDate" type="date" value="${draft.dueDate}" required />
+          </label>
+        </div>
+        <label class="field">
+          <span>Observações</span>
+          <textarea name="notes" rows="4" placeholder="Combinados, garantias, local de pagamento...">${escapeHtml(draft.notes)}</textarea>
+        </label>
       </section>
 
       <div class="button-row">
@@ -1522,7 +1552,7 @@ function getPreview(draft) {
   } else if (dueDiff === 0) {
     status = "Vence hoje";
   } else if (dueDiff <= 5) {
-    status = "Proximo";
+    status = "Próximo";
   }
 
   return {
@@ -1540,14 +1570,14 @@ function updatePreviewPanel() {
     interest: formatCurrency(preview.interestAmount),
     total: formatCurrency(preview.totalOriginal),
     wallet: formatCurrency(preview.walletAfter),
-    status: preview.status
+    status: preview.status,
+    late: formatCurrency(preview.lateProjection)
   };
 
   Object.entries(values).forEach(([key, value]) => {
-    const target = document.querySelector(`[data-preview="${key}"]`);
-    if (target) {
+    document.querySelectorAll(`[data-preview="${key}"]`).forEach((target) => {
       target.textContent = value;
-    }
+    });
   });
 }
 
@@ -1668,7 +1698,7 @@ function renderCalendar() {
 
     <section class="section-block">
       <div class="section-head">
-        <h3>Proximos 30 dias</h3>
+        <h3>Próximos 30 dias</h3>
       </div>
       <div class="timeline-list">
         ${nextLoans.length ? nextLoans.map(renderAgendaItem).join("") : emptyState("Sem próximos vencimentos cadastrados.")}
@@ -1719,14 +1749,14 @@ function renderReports() {
         ${metricCard("Recebido", metrics.totalPaid, "Pagamentos", "green", "fa-circle-dollar-to-slot", "reports")}
         ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.lateRate}% da carteira`, "red", "fa-triangle-exclamation", "reports")}
         ${metricCard("Lucro recebido", metrics.profitReceived, "Realizado", "green", "fa-chart-line", "reports")}
-        ${metricCard("Recebido periodo", periodStats.received, `${periodStats.count} pagamento(s)`, "green", "fa-calendar-check", "reports")}
+        ${metricCard("Recebido no período", periodStats.received, `${periodStats.count} pagamento(s)`, "green", "fa-calendar-check", "reports")}
         ${metricCard("Clientes ativos", String(metrics.activeClients), `${metrics.overdueClients} com atraso`, "blue", "fa-users", "clients")}
       </div>
     </section>
 
     <section class="section-block panel-card">
       <div class="section-head">
-        <h3>Evolucao mensal</h3>
+        <h3>Evolução mensal</h3>
       </div>
       <div class="line-chart-box">
         <canvas id="monthly-chart"></canvas>
@@ -2133,7 +2163,7 @@ function deleteLoan(loanId) {
   addAudit("delete", "Empréstimo excluído: " + loan.name + ".", loanId);
   updateWalletAvailable(loan.principal - loan.paidAmount, {
     type: "delete",
-    label: "Exclusao ajustou saldo de " + loan.name,
+    label: "Exclusão ajustou saldo de " + loan.name,
     loanId
   });
   state.data.loans = state.data.loans.filter((item) => item.id !== loanId);
