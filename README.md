@@ -14,7 +14,8 @@ Aplicativo financeiro premium para controle pessoal de empréstimos, juros, atra
 
 ## Funcionalidades
 
-- Dashboard inicial com totais, lucro, clientes, vencimentos e atrasados.
+- Dashboard inicial com valores dinâmicos reais: capital em aberto, total a receber, lucro a receber, vencimentos e atrasados.
+- Relatórios com separação entre histórico geral, lucro recebido e lucro ainda pendente.
 - Tela inicial de configuração do primeiro saldo disponível da carteira.
 - Saldo disponível da carteira com atualização automática por empréstimos e pagamentos.
 - Tela Carteira com histórico automático de movimentações do saldo.

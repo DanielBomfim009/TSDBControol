@@ -353,6 +353,10 @@ function getComputedLoan(loan) {
     status = "soon";
   }
 
+  const principalPaid = Math.min(paidAmount, principal);
+  const principalOpen = status === "paid" ? 0 : Math.max(principal - principalPaid, 0);
+  const profitOpen = status === "paid" ? 0 : Math.max(balance - principalOpen, 0);
+
   return {
     ...loan,
     principal,
@@ -362,6 +366,9 @@ function getComputedLoan(loan) {
     totalUpdated,
     paidAmount,
     balance,
+    principalPaid,
+    principalOpen,
+    profitOpen,
     lateDays,
     remainingDays,
     status,
@@ -409,12 +416,14 @@ function getMetrics() {
     dueToday: loans.filter((loan) => loan.status === "due-today"),
     dueSoon: loans.filter((loan) => ["soon", "due-today", "on-time"].includes(loan.status) && loan.balance > 0).slice(0, 5),
     totalPrincipal: loans.reduce((sum, loan) => sum + loan.principal, 0),
+    openPrincipal: active.reduce((sum, loan) => sum + loan.principalOpen, 0),
     totalReceivable: active.reduce((sum, loan) => sum + loan.balance, 0),
     totalProjected: loans.reduce((sum, loan) => sum + loan.totalUpdated, 0),
     totalPaid: loans.reduce((sum, loan) => sum + loan.paidAmount, 0),
     totalOverdue: overdue.reduce((sum, loan) => sum + loan.balance, 0),
     totalOnTime: onTime.reduce((sum, loan) => sum + loan.balance, 0),
     profitProjected: loans.reduce((sum, loan) => sum + loan.profitProjected, 0),
+    profitOpen: active.reduce((sum, loan) => sum + loan.profitOpen, 0),
     profitReceived: loans.reduce((sum, loan) => sum + loan.profitReceived, 0),
     walletAvailable: getWalletAvailable(),
     clients: clientNames.size,
@@ -451,8 +460,10 @@ function buildClientGroups(loans = getLoans()) {
         phone: loan.phone,
         loans: [],
         totalPrincipal: 0,
+        openPrincipal: 0,
         totalPaid: 0,
         balance: 0,
+        profitOpen: 0,
         profitReceived: 0,
         overdueCount: 0,
         activeCount: 0,
@@ -463,8 +474,10 @@ function buildClientGroups(loans = getLoans()) {
 
     current.loans.push(loan);
     current.totalPrincipal += loan.principal;
+    current.openPrincipal += loan.principalOpen;
     current.totalPaid += loan.paidAmount;
     current.balance += loan.balance;
+    current.profitOpen += loan.profitOpen;
     current.profitReceived += loan.profitReceived;
     current.overdueCount += loan.status === "overdue" ? 1 : 0;
     current.activeCount += loan.status !== "paid" ? 1 : 0;
@@ -893,9 +906,9 @@ function renderDashboard() {
     <section class="section-block dashboard-summary">
       <div class="metric-grid metric-grid-compact">
         ${metricCard("A receber", metrics.totalReceivable, "Saldo aberto", "green", "fa-sack-dollar", "loans")}
-        ${metricCard("Emprestado", metrics.totalPrincipal, "Capital aplicado", "blue", "fa-scale-balanced", "reports")}
+        ${metricCard("Emprestado aberto", metrics.openPrincipal, "Principal pendente", "blue", "fa-scale-balanced", "loans")}
         ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.overdue.length} operação(ões)`, "red", "fa-triangle-exclamation", "filter-overdue")}
-        ${metricCard("Lucro", metrics.profitReceived, "Recebido", "green", "fa-chart-line", "reports")}
+        ${metricCard("Lucro a receber", metrics.profitOpen, "Juros pendentes", "green", "fa-chart-line", "reports")}
       </div>
     </section>
 
@@ -1091,7 +1104,7 @@ function renderWallet() {
 
     <section class="section-block">
       <div class="metric-grid">
-        ${metricCard("Capital aplicado", metrics.totalPrincipal, "Total já emprestado", "blue", "fa-money-bill-trend-up", "reports")}
+        ${metricCard("Capital em aberto", metrics.openPrincipal, "Principal pendente", "blue", "fa-money-bill-trend-up", "reports")}
         ${metricCard("A receber", metrics.totalReceivable, "Saldo aberto", "green", "fa-sack-dollar", "loans")}
         ${metricCard("Recebido", metrics.totalPaid, "Entradas registradas", "green", "fa-circle-dollar-to-slot", "reports")}
         ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.overdueClients} cliente(s)`, "red", "fa-triangle-exclamation", "clients")}
@@ -1248,8 +1261,9 @@ function renderClientDetail(client) {
 
       <div class="detail-grid">
         ${detailLine("Telefone", client.phone ? escapeHtml(client.phone) : "Não informado")}
-        ${detailLine("Total emprestado", formatCurrency(client.totalPrincipal))}
+        ${detailLine("Emprestado em aberto", formatCurrency(client.openPrincipal))}
         ${detailLine("Saldo em aberto", formatCurrency(client.balance), client.balance ? "status-green" : "")}
+        ${detailLine("Lucro a receber", formatCurrency(client.profitOpen), "status-green")}
         ${detailLine("Total recebido", formatCurrency(client.totalPaid))}
         ${detailLine("Lucro recebido", formatCurrency(client.profitReceived), "status-green")}
         ${detailLine("Próximo vencimento", client.nextDueDate ? formatDate(client.nextDueDate) : "Sem vencimento aberto")}
@@ -1416,6 +1430,7 @@ function renderLoanDetail(loan) {
 
       <div class="detail-grid">
         ${detailLine("Valor emprestado", formatCurrency(loan.principal))}
+        ${detailLine("Principal em aberto", formatCurrency(loan.principalOpen))}
         ${detailLine("Juros contratado", formatPercent(loan.interestRate))}
         ${detailLine("Valor dos juros", formatCurrency(loan.interestAmount))}
         ${detailLine("Total original", formatCurrency(loan.totalOriginal))}
@@ -1428,7 +1443,7 @@ function renderLoanDetail(loan) {
       </div>
 
       <div class="finance-strip">
-        ${miniStat("Lucro previsto", formatCurrency(loan.profitProjected), "green")}
+        ${miniStat("Lucro a receber", formatCurrency(loan.profitOpen), "green")}
         ${miniStat("Lucro recebido", formatCurrency(loan.profitReceived), "blue")}
         ${miniStat("Dias atraso", String(loan.lateDays), loan.lateDays ? "red" : "green")}
       </div>
@@ -1917,7 +1932,10 @@ function renderReports() {
     <section class="section-block">
       <div class="metric-grid metric-grid-compact">
         ${metricCard("A receber", metrics.totalReceivable, "Saldo aberto", "green", "fa-sack-dollar", "loans")}
-        ${metricCard("Emprestado", metrics.totalPrincipal, "Capital aplicado", "blue", "fa-money-bill-trend-up", "reports")}
+        ${metricCard("Emprestado aberto", metrics.openPrincipal, "Principal pendente", "blue", "fa-money-bill-trend-up", "loans")}
+        ${metricCard("Emprestado geral", metrics.totalPrincipal, "Histórico lançado", "blue", "fa-landmark", "reports")}
+        ${metricCard("Lucro a receber", metrics.profitOpen, "Juros pendentes", "green", "fa-chart-line", "reports")}
+        ${metricCard("Lucro recebido", metrics.profitReceived, "Realizado", "green", "fa-circle-check", "reports")}
         ${metricCard("Recebido", metrics.totalPaid, "Pagamentos", "green", "fa-circle-dollar-to-slot", "reports")}
         ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.lateRate}% da carteira`, "red", "fa-triangle-exclamation", "filter-overdue")}
       </div>
