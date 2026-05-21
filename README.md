@@ -1,43 +1,43 @@
-# TSDB Emprestimos
+# TSDB Empréstimos
 
-Aplicativo financeiro premium para controle pessoal de emprestimos, juros, atrasos, pagamentos e cobrancas via WhatsApp.
+Aplicativo financeiro premium para controle pessoal de empréstimos, juros, atrasos, pagamentos e cobranças via WhatsApp.
 
 ## Estrutura final
 
 - `index.html`: estrutura principal do PWA e modais.
-- `styles.css`: visual dark premium, mobile-first, cards, menus, formularios e responsividade.
-- `app.js`: persistencia local, calculos automaticos, dashboards, relatorios, filtros, backup e WhatsApp.
-- `manifest.webmanifest`: configuracao de instalacao do PWA.
+- `styles.css`: visual dark premium, mobile-first, cards, menus, formulários e responsividade.
+- `app.js`: persistência local, cálculos automáticos, dashboards, relatórios, filtros, backup e WhatsApp.
+- `manifest.webmanifest`: configuração de instalação do PWA.
 - `sw.js`: service worker para cache offline dos arquivos principais.
-- `icons/`: icones do aplicativo.
-- `assets/`: logomarca propria da TSDB Emprestimos.
+- `icons/`: ícones do aplicativo.
+- `assets/`: logomarca própria da TSDB Empréstimos.
 
 ## Funcionalidades
 
 - Dashboard inicial com totais, lucro, clientes, vencimentos e atrasados.
-- Saldo disponível da carteira com atualização automatica por emprestimos e pagamentos.
-- Tela Carteira com historico automatico de movimentacoes do saldo.
-- Tela Clientes com lista limpa e detalhes completos somente apos selecionar um cliente.
-- Cadastro e edicao de emprestimos com calculo em tempo real.
-- Juros contratado automatico.
-- Juros diario por atraso automatico.
-- Status automaticos: em dia, vence hoje, proximo do vencimento, atrasado e pago.
+- Saldo disponível da carteira com atualização automática por empréstimos e pagamentos.
+- Tela Carteira com histórico automático de movimentações do saldo.
+- Tela Clientes com lista limpa e detalhes completos somente após selecionar um cliente.
+- Cadastro e edição de empréstimos com cálculo em tempo real.
+- Juros contratado automático.
+- Juros diário por atraso automático.
+- Status automáticos: em dia, vence hoje, próximo do vencimento, atrasado e pago.
 - Lista com busca e filtros.
-- Lista de emprestimos sem detalhe aberto por padrao para reduzir poluicao visual.
-- Agenda de vencimentos, atrasos e cobrancas.
-- Menu hamburguer com atalhos operacionais.
+- Lista de empréstimos sem detalhe aberto por padrão para reduzir poluição visual.
+- Agenda de vencimentos, atrasos e cobranças.
+- Menu hambúrguer com atalhos operacionais.
 - Registro de pagamentos.
-- Historico e auditoria por emprestimo.
-- Relatorios com graficos Chart.js.
-- Periodos de relatorio: hoje, 7 dias, mes, ano e tudo.
-- Backup JSON, exportacao CSV, importacao, limpeza de dados e configuracoes padrao.
-- Cobranca via WhatsApp com mensagens rapidas por contexto.
-- Geracao de contrato e recibo para impressao/PDF.
-- Protecao local por PIN.
+- Histórico e auditoria por empréstimo.
+- Relatórios com gráficos Chart.js.
+- Períodos de relatório: hoje, 7 dias, mês, ano e tudo.
+- Backup JSON, exportação CSV, importação, limpeza de dados e configurações padrão.
+- Cobrança via WhatsApp com mensagens rápidas por contexto.
+- Geração de contrato e recibo para impressão/PDF.
+- Proteção local por PIN.
 
-## Publicacao no GitHub Pages
+## Publicação no GitHub Pages
 
-O projeto e estatico e nao precisa de build.
+O projeto é estático e não precisa de build.
 
 1. Abra `Settings > Pages` no repositorio.
 2. Em `Build and deployment`, selecione `Deploy from a branch`.
@@ -46,4 +46,4 @@ O projeto e estatico e nao precisa de build.
 
 ## Dados
 
-Os dados ficam no `localStorage` do navegador. Para trocar de aparelho ou navegador, use a exportacao e importacao de backup JSON dentro do app.
+Os dados ficam no `localStorage` do navegador. Para trocar de aparelho ou navegador, use a exportação e importação de backup JSON dentro do app.

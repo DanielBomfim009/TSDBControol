@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
       name="description"
-      content="TSDB Emprestimos, aplicativo premium para controle automatizado de emprestimos, juros, atrasos e recebimentos."
+      content="TSDB Empréstimos, aplicativo premium para controle automatizado de empréstimos, juros, atrasos e recebimentos."
     />
     <meta name="theme-color" content="#0b0904" />
-    <title>TSDB Emprestimos</title>
+    <title>TSDB Empréstimos</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icons/icon-192.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -20,7 +20,7 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260520-mobile-pwa-fix" />
+    <link rel="stylesheet" href="./styles.css?v=20260520-refino-geral-v2" />
   </head>
   <body>
     <div class="loading-screen" id="loading-screen" aria-hidden="true">
@@ -28,7 +28,7 @@
         <div class="loading-logo">
           <img src="./assets/tsdb-mark.svg" alt="" />
         </div>
-        <strong>TSDB Emprestimos</strong>
+        <strong>TSDB Empréstimos</strong>
         <span>Atualizando sua carteira financeira</span>
         <div class="loading-bar"><span></span></div>
       </div>
@@ -47,14 +47,14 @@
           <section class="screen" id="screen-settings" data-screen-panel="settings"></section>
         </section>
 
-        <button class="fab-button" type="button" data-action="new-loan" aria-label="Cadastrar novo emprestimo">
+        <button class="fab-button" type="button" data-action="new-loan" aria-label="Cadastrar novo empréstimo">
           <i class="fa-solid fa-plus"></i>
         </button>
 
-        <nav class="bottom-nav" aria-label="Navegacao principal">
+        <nav class="bottom-nav" aria-label="Navegação principal">
           <button class="nav-item is-active" type="button" data-nav="dashboard">
             <i class="fa-solid fa-house"></i>
-            <span>Inicio</span>
+            <span>Início</span>
           </button>
           <button class="nav-item" type="button" data-nav="clients">
             <i class="fa-solid fa-users"></i>
@@ -62,11 +62,11 @@
           </button>
           <button class="nav-item" type="button" data-nav="loans">
             <i class="fa-solid fa-wallet"></i>
-            <span>Emprestimos</span>
+            <span>Emprést.</span>
           </button>
           <button class="nav-item" type="button" data-nav="reports">
             <i class="fa-solid fa-chart-column"></i>
-            <span>Relatorios</span>
+            <span>Relatórios</span>
           </button>
           <button class="nav-item" type="button" data-nav="settings">
             <i class="fa-solid fa-gear"></i>
@@ -88,7 +88,7 @@
         <header class="modal-header">
           <div>
             <h2>Registrar pagamento</h2>
-            <p>Confirme o valor recebido para atualizar saldo, status e relatorios.</p>
+            <p>Confirme o valor recebido para atualizar saldo, status e relatórios.</p>
           </div>
           <button class="icon-button" type="button" data-action="close-modal" data-modal="payment-modal" aria-label="Fechar">
             <i class="fa-solid fa-xmark"></i>
@@ -108,7 +108,7 @@
         </div>
 
         <label class="field">
-          <span>Metodo</span>
+          <span>Método</span>
           <select name="method">
             <option value="Pix">Pix</option>
             <option value="Dinheiro">Dinheiro</option>
@@ -118,7 +118,7 @@
         </label>
 
         <label class="field">
-          <span>Observacoes</span>
+          <span>Observações</span>
           <textarea name="notes" rows="3" placeholder="Detalhes do recebimento"></textarea>
         </label>
 
@@ -139,8 +139,8 @@
         <div class="modal-handle"></div>
         <header class="modal-header">
           <div>
-            <h2>Acoes do emprestimo</h2>
-            <p>Escolha uma acao para a operacao selecionada.</p>
+            <h2>Ações do empréstimo</h2>
+            <p>Escolha uma ação para a operação selecionada.</p>
           </div>
           <button class="icon-button" type="button" data-action="close-modal" data-modal="loan-menu-modal" aria-label="Fechar">
             <i class="fa-solid fa-xmark"></i>
@@ -174,6 +174,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-    <script src="./app.js?v=20260520-mobile-pwa-fix" defer></script>
+    <script src="./app.js?v=20260520-refino-geral-v2" defer></script>
   </body>
 </html>

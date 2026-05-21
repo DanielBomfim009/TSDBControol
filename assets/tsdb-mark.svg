@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
   <title id="title">Marca TSDB</title>
-  <desc id="desc">Escudo dourado com cifra, simbolizando protecao financeira.</desc>
+  <desc id="desc">Escudo dourado com cifra, simbolizando proteção financeira.</desc>
   <defs>
     <radialGradient id="mark-bg" cx="50%" cy="18%" r="82%">
       <stop offset="0%" stop-color="#4a3510" />

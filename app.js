@@ -592,8 +592,8 @@ function getPortfolioInsights(metrics = getMetrics()) {
     },
     {
       label: "Cliente recorrente",
-      value: recurrent && recurrent.count > 1 ? recurrent.name : "Ainda unico",
-      detail: recurrent ? recurrent.count + " operacao(oes)" : "Sem historico",
+      value: recurrent && recurrent.count > 1 ? recurrent.name : "Ainda único",
+      detail: recurrent ? recurrent.count + " operação(ões)" : "Sem histórico",
       tone: "yellow",
       icon: "fa-repeat"
     }
@@ -667,7 +667,7 @@ function statusMeta(loan) {
     },
     overdue: {
       label: "Atrasado",
-      detail: "Vencido ha " + loan.lateDays + " dia(s)",
+      detail: "Vencido há " + loan.lateDays + " dia(s)",
       tone: "red",
       icon: "fa-triangle-exclamation"
     },
@@ -732,7 +732,7 @@ function renderHeader(title, subtitle, backAction, actions = "") {
         ${
           isBrandHeader
             ? `<div class="brand-heading">
-                <img src="./assets/tsdb-logo.svg" alt="TSDB Emprestimos" />
+                <img src="./assets/tsdb-logo.svg" alt="TSDB Empréstimos" />
               </div>`
             : `<h1>${title}</h1>`
         }
@@ -749,7 +749,7 @@ function renderDashboard() {
 
   dom.screens.dashboard.innerHTML = `
     ${renderHeader(
-      "TSDB Emprestimos",
+      "TSDB Empréstimos",
       "Sistema inteligente para controlar juros, vencimentos e recebimentos.",
       null,
       `<button class="icon-button" type="button" data-action="calendar" aria-label="Alertas"><i class="fa-regular fa-bell"></i></button>`
@@ -793,25 +793,25 @@ function renderDashboard() {
       <div class="metric-grid">
         ${metricCard("A receber", metrics.totalReceivable, "Saldo aberto", "green", "fa-sack-dollar", "loans")}
         ${metricCard("Emprestado", metrics.totalPrincipal, "Capital lançado", "blue", "fa-scale-balanced", "reports")}
-        ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.overdue.length} operacao(oes)`, "red", "fa-triangle-exclamation", "filter-overdue")}
+        ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.overdue.length} operação(ões)`, "red", "fa-triangle-exclamation", "filter-overdue")}
         ${metricCard("Lucro recebido", metrics.profitReceived, "Realizado", "green", "fa-chart-line", "reports")}
       </div>
     </section>
 
     <section class="section-block">
       <div class="action-grid">
-        ${actionCard("Novo emprestimo", "Cadastro com calculo em tempo real", "fa-plus", "new-loan")}
+        ${actionCard("Novo empréstimo", "Cadastro com cálculo em tempo real", "fa-plus", "new-loan")}
         ${actionCard("Clientes", "Lista limpa e detalhes sob demanda", "fa-users", "clients")}
-        ${actionCard("Emprestimos", "Lista, detalhes e cobrancas", "fa-wallet", "loans")}
-        ${actionCard("Agenda", "Calendario de vencimentos e cobrancas", "fa-calendar-days", "calendar")}
+        ${actionCard("Empréstimos", "Lista, detalhes e cobranças", "fa-wallet", "loans")}
+        ${actionCard("Agenda", "Calendário de vencimentos e cobranças", "fa-calendar-days", "calendar")}
       </div>
     </section>
 
     <section class="section-block panel-card">
       <div class="section-head">
         <div>
-          <h3>Visao geral</h3>
-          <p>Distribuicao atual da carteira</p>
+          <h3>Visão geral</h3>
+          <p>Distribuição atual da carteira</p>
         </div>
       </div>
       <div class="chart-layout">
@@ -834,12 +834,12 @@ function renderDashboard() {
       <div class="section-head">
         <div>
           <h3>Hoje e atrasados</h3>
-          <p>Fila enxuta para agir rapido</p>
+          <p>Fila enxuta para agir rápido</p>
         </div>
         <button class="link-button" type="button" data-action="calendar">Ver agenda</button>
       </div>
       <div class="loan-list">
-        ${attentionLoans.length ? attentionLoans.map(renderLoanCard).join("") : emptyState("Nenhuma cobranca urgente agora.")}
+        ${attentionLoans.length ? attentionLoans.map(renderLoanCard).join("") : emptyState("Nenhuma cobrança urgente agora.")}
       </div>
     </section>
 
@@ -907,13 +907,13 @@ function renderWallet() {
   const recentMovements = movements.slice(0, 12);
 
   dom.screens.wallet.innerHTML = `
-    ${renderHeader("Carteira", "Saldo disponivel, movimentacoes e capacidade para novos emprestimos.", "dashboard")}
+    ${renderHeader("Carteira", "Saldo disponível, movimentações e capacidade para novos empréstimos.", "dashboard")}
 
     <section class="section-block wallet-panel wallet-panel-large">
       <div>
         <span class="eyebrow">Saldo disponível</span>
         <strong>${formatCurrency(metrics.walletAvailable)}</strong>
-        <p>Controle o dinheiro livre para emprestar. Cada novo emprestimo reduz o saldo e cada pagamento recebido aumenta automaticamente.</p>
+        <p>Controle o dinheiro livre para emprestar. Cada novo empréstimo reduz o saldo e cada pagamento recebido aumenta automaticamente.</p>
       </div>
       <button class="button button-primary" type="button" data-action="settings">
         <i class="fa-solid fa-pen-to-square"></i>
@@ -923,7 +923,7 @@ function renderWallet() {
 
     <section class="section-block">
       <div class="metric-grid">
-        ${metricCard("Capital aplicado", metrics.totalPrincipal, "Total ja emprestado", "blue", "fa-money-bill-trend-up", "reports")}
+        ${metricCard("Capital aplicado", metrics.totalPrincipal, "Total já emprestado", "blue", "fa-money-bill-trend-up", "reports")}
         ${metricCard("A receber", metrics.totalReceivable, "Saldo aberto", "green", "fa-sack-dollar", "loans")}
         ${metricCard("Recebido", metrics.totalPaid, "Entradas registradas", "green", "fa-circle-dollar-to-slot", "reports")}
         ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.overdueClients} cliente(s)`, "red", "fa-triangle-exclamation", "clients")}
@@ -933,12 +933,12 @@ function renderWallet() {
     <section class="section-block panel-card">
       <div class="section-head">
         <div>
-          <h3>Movimentacoes da carteira</h3>
-          <p>Historico automatico para explicar cada mudanca no saldo.</p>
+          <h3>Movimentações da carteira</h3>
+          <p>Histórico automático para explicar cada mudança no saldo.</p>
         </div>
       </div>
       <div class="movement-list">
-        ${recentMovements.length ? recentMovements.map(renderWalletMovement).join("") : emptyState("Nenhuma movimentacao registrada ainda. Ajuste o saldo ou cadastre um emprestimo.")}
+        ${recentMovements.length ? recentMovements.map(renderWalletMovement).join("") : emptyState("Nenhuma movimentação registrada ainda. Ajuste o saldo ou cadastre um empréstimo.")}
       </div>
     </section>
   `;
@@ -965,7 +965,7 @@ function clientStatusMeta(client) {
   if (client.overdueCount) {
     return {
       label: "Atrasado",
-      detail: `${client.overdueCount} operacao(oes) em atraso`,
+      detail: `${client.overdueCount} operação(ões) em atraso`,
       tone: "red"
     };
   }
@@ -973,7 +973,7 @@ function clientStatusMeta(client) {
   if (client.activeCount) {
     return {
       label: "Em aberto",
-      detail: `${client.activeCount} operacao(oes) ativa(s)`,
+      detail: `${client.activeCount} operação(ões) ativa(s)`,
       tone: "green"
     };
   }
@@ -1027,7 +1027,7 @@ function renderClients() {
         <div class="section-head">
           <div>
             <h3>Detalhes sob demanda</h3>
-            <p>Selecione um cliente acima para abrir valores, datas, emprestimos e historico sem poluir a lista principal.</p>
+            <p>Selecione um cliente acima para abrir valores, datas, empréstimos e histórico sem poluir a lista principal.</p>
           </div>
         </div>
       </section>
@@ -1053,7 +1053,7 @@ function renderClientCard(client) {
       <span class="avatar">${initials(client.name)}</span>
       <span class="client-main">
         <strong>${escapeHtml(client.name)}</strong>
-        <span>${client.phone ? escapeHtml(client.phone) : `${client.loans.length} emprestimo(s)`}</span>
+        <span>${client.phone ? escapeHtml(client.phone) : `${client.loans.length} empréstimo(s)`}</span>
       </span>
       <span class="client-side">
         <strong>${formatCurrency(client.balance)}</strong>
@@ -1075,33 +1075,33 @@ function renderClientDetail(client) {
           <h3>${escapeHtml(client.name)}</h3>
           <p class="status-${meta.tone}">${meta.detail}</p>
         </div>
-        <button class="icon-button" type="button" data-action="new-loan" aria-label="Novo emprestimo">
+        <button class="icon-button" type="button" data-action="new-loan" aria-label="Novo empréstimo">
           <i class="fa-solid fa-plus"></i>
         </button>
       </header>
 
       <div class="detail-grid">
-        ${detailLine("Telefone", client.phone ? escapeHtml(client.phone) : "Nao informado")}
+        ${detailLine("Telefone", client.phone ? escapeHtml(client.phone) : "Não informado")}
         ${detailLine("Total emprestado", formatCurrency(client.totalPrincipal))}
         ${detailLine("Saldo em aberto", formatCurrency(client.balance), client.balance ? "status-green" : "")}
         ${detailLine("Total recebido", formatCurrency(client.totalPaid))}
         ${detailLine("Lucro recebido", formatCurrency(client.profitReceived), "status-green")}
-        ${detailLine("Proximo vencimento", client.nextDueDate ? formatDate(client.nextDueDate) : "Sem vencimento aberto")}
+        ${detailLine("Próximo vencimento", client.nextDueDate ? formatDate(client.nextDueDate) : "Sem vencimento aberto")}
       </div>
 
       <div class="finance-strip">
-        ${miniStat("Operacoes", String(client.loans.length), "blue")}
+        ${miniStat("Operações", String(client.loans.length), "blue")}
         ${miniStat("Ativas", String(client.activeCount), "green")}
         ${miniStat("Atrasadas", String(client.overdueCount), client.overdueCount ? "red" : "green")}
       </div>
 
       <section class="timeline-card">
         <div class="section-head">
-          <h4>Emprestimos do cliente</h4>
+          <h4>Empréstimos do cliente</h4>
           <button class="link-button" type="button" data-action="clear-client-selection">Fechar detalhe</button>
         </div>
         <div class="client-loan-list">
-          ${client.loans.length ? client.loans.map(renderClientLoanItem).join("") : emptyState("Nenhum emprestimo para este cliente.")}
+          ${client.loans.length ? client.loans.map(renderClientLoanItem).join("") : emptyState("Nenhum empréstimo para este cliente.")}
         </div>
       </section>
 
@@ -1139,8 +1139,8 @@ function renderLoans() {
 
   dom.screens.loans.innerHTML = `
     ${renderHeader(
-      "Meus emprestimos",
-      "Filtros, busca, detalhes e cobranca.",
+      "Meus empréstimos",
+      "Filtros, busca, detalhes e cobrança.",
       "dashboard",
       `<button class="icon-button" type="button" data-action="reset-filter" aria-label="Limpar filtros"><i class="fa-solid fa-filter-circle-xmark"></i></button>`
     )}
@@ -1158,7 +1158,7 @@ function renderLoans() {
     </label>
 
     <section class="loan-list">
-      ${loans.length ? loans.map(renderLoanCard).join("") : emptyState("Nenhum emprestimo encontrado.")}
+      ${loans.length ? loans.map(renderLoanCard).join("") : emptyState("Nenhum empréstimo encontrado.")}
     </section>
 
     ${selected ? renderLoanDetail(selected) : `
@@ -1166,7 +1166,7 @@ function renderLoans() {
         <div class="section-head">
           <div>
             <h3>Detalhes sob demanda</h3>
-            <p>Selecione um emprestimo na lista para ver valores, juros, pagamentos e acoes.</p>
+            <p>Selecione um empréstimo na lista para ver valores, juros, pagamentos e ações.</p>
           </div>
         </div>
       </section>
@@ -1245,7 +1245,7 @@ function renderLoanDetail(loan) {
           <h3>${escapeHtml(loan.name)}</h3>
           <p class="status-${meta.tone}">${meta.label}</p>
         </div>
-        <button class="icon-button" type="button" data-action="open-loan-menu" data-loan-id="${loan.id}" aria-label="Acoes">
+        <button class="icon-button" type="button" data-action="open-loan-menu" data-loan-id="${loan.id}" aria-label="Ações">
           <i class="fa-solid fa-ellipsis-vertical"></i>
         </button>
       </header>
@@ -1258,14 +1258,14 @@ function renderLoanDetail(loan) {
         ${detailLine("Multa acumulada", formatCurrency(loan.lateInterest))}
         ${detailLine("Total atualizado", formatCurrency(loan.totalUpdated), "status-green")}
         ${detailLine("Saldo em aberto", formatCurrency(loan.balance))}
-        ${detailLine("Data do emprestimo", formatDate(loan.issueDate))}
+        ${detailLine("Data do empréstimo", formatDate(loan.issueDate))}
         ${detailLine("Vencimento", formatDate(loan.dueDate))}
         ${detailLine("Juros por atraso", formatPercent(loan.dailyLateRate) + " ao dia")}
       </div>
 
       <div class="late-box">
         <h4>Projecao de atraso</h4>
-        <p>Se permanecer aberto por mais 3 dias, o total estimado sera ${formatCurrency(lateProjection)}.</p>
+        <p>Se permanecer aberto por mais 3 dias, o total estimado será ${formatCurrency(lateProjection)}.</p>
       </div>
 
       <div class="finance-strip">
@@ -1276,7 +1276,7 @@ function renderLoanDetail(loan) {
 
       <section class="timeline-card">
         <div class="section-head">
-          <h4>Historico e auditoria</h4>
+          <h4>Histórico e auditoria</h4>
         </div>
         ${renderLoanHistory(loan)}
       </section>
@@ -1324,7 +1324,7 @@ function renderLoanHistory(loan) {
   const events = [
     {
       date: loan.createdAt,
-      title: "Emprestimo criado",
+      title: "Empréstimo criado",
       text: formatCurrency(loan.principal),
       tone: "green"
     },
@@ -1343,7 +1343,7 @@ function renderLoanHistory(loan) {
   ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8);
 
   if (!events.length) {
-    return emptyState("Nenhum historico registrado.");
+    return emptyState("Nenhum histórico registrado.");
   }
 
   return `
@@ -1394,8 +1394,8 @@ function renderNewLoan() {
 
   dom.screens.newLoan.innerHTML = `
     ${renderHeader(
-      isEditing ? "Editar emprestimo" : "Novo emprestimo",
-      "Calculo em tempo real com juros e multa automatica.",
+      isEditing ? "Editar empréstimo" : "Novo empréstimo",
+      "Cálculo em tempo real com juros e multa automática.",
       "loans",
       `<button class="icon-button" type="button" data-action="apply-defaults" aria-label="Usar padroes"><i class="fa-solid fa-wand-magic-sparkles"></i></button>`
     )}
@@ -1423,7 +1423,7 @@ function renderNewLoan() {
 
       <div class="form-grid">
         <label class="field">
-          <span>Data do emprestimo</span>
+          <span>Data do empréstimo</span>
           <input name="issueDate" type="date" value="${draft.issueDate}" required />
         </label>
         <label class="field">
@@ -1438,16 +1438,16 @@ function renderNewLoan() {
       </label>
 
       <label class="field">
-        <span>Observacoes</span>
+        <span>Observações</span>
         <textarea name="notes" rows="4" placeholder="Combinados, garantias, local de pagamento...">${escapeHtml(draft.notes)}</textarea>
       </label>
 
       <section class="preview-card">
-        <h3>Calculo automatico</h3>
+        <h3>Cálculo automático</h3>
         <div class="preview-grid">
           ${previewItem("Juros", formatCurrency(preview.interestAmount), "interest")}
           ${previewItem("Total original", formatCurrency(preview.totalOriginal), "total")}
-          ${previewItem("Saldo apos cadastro", formatCurrency(preview.walletAfter), "wallet")}
+          ${previewItem("Saldo após cadastro", formatCurrency(preview.walletAfter), "wallet")}
           ${previewItem("Status previsto", preview.status, "status")}
         </div>
       </section>
@@ -1585,7 +1585,7 @@ function saveLoanFromForm(event) {
   }
 
   if (parseDate(payload.dueDate) < parseDate(payload.issueDate)) {
-    alert("O vencimento precisa ser posterior a data do emprestimo.");
+    alert("O vencimento precisa ser posterior à data do empréstimo.");
     return;
   }
 
@@ -1597,10 +1597,10 @@ function saveLoanFromForm(event) {
 
   if (existing) {
     state.data.loans = state.data.loans.map((loan) => (loan.id === existing.id ? payload : loan));
-    addAudit("edit", "Emprestimo atualizado para " + payload.name + ".", payload.id);
+    addAudit("edit", "Empréstimo atualizado para " + payload.name + ".", payload.id);
   } else {
     state.data.loans.unshift(payload);
-    addAudit("create", "Emprestimo criado para " + payload.name + " no valor de " + formatCurrency(payload.principal) + ".", payload.id);
+    addAudit("create", "Empréstimo criado para " + payload.name + " no valor de " + formatCurrency(payload.principal) + ".", payload.id);
   }
 
   if (principalDelta) {
@@ -1608,8 +1608,8 @@ function saveLoanFromForm(event) {
       type: principalDelta > 0 ? "loan" : "loan-adjust",
       label:
         principalDelta > 0
-          ? "Emprestimo liberado para " + payload.name
-          : "Reducao de emprestimo para " + payload.name,
+          ? "Empréstimo liberado para " + payload.name
+          : "Redução de empréstimo para " + payload.name,
       loanId: payload.id
     });
   }
@@ -1632,7 +1632,7 @@ function renderCalendar() {
     .slice(0, 12);
 
   dom.screens.calendar.innerHTML = `
-    ${renderHeader("Agenda", "Vencimentos, atrasos e cobrancas do dia.", "dashboard")}
+    ${renderHeader("Agenda", "Vencimentos, atrasos e cobranças do dia.", "dashboard")}
 
     <section class="section-block calendar-hero">
       <div class="calendar-day">
@@ -1641,9 +1641,9 @@ function renderCalendar() {
         <small>${new Date().toLocaleDateString("pt-BR", { month: "long" })}</small>
       </div>
       <div>
-        <span class="eyebrow">Agenda automatica</span>
+        <span class="eyebrow">Agenda automática</span>
         <h2>${todayLoans.length ? `${todayLoans.length} vencendo hoje` : "Nenhum vencimento hoje"}</h2>
-        <p>${overdue.length ? `${overdue.length} operacao(oes) exigem cobranca.` : "Sem atrasos pendentes agora."}</p>
+        <p>${overdue.length ? `${overdue.length} operação(ões) exigem cobrança.` : "Sem atrasos pendentes agora."}</p>
       </div>
     </section>
 
@@ -1671,7 +1671,7 @@ function renderCalendar() {
         <h3>Proximos 30 dias</h3>
       </div>
       <div class="timeline-list">
-        ${nextLoans.length ? nextLoans.map(renderAgendaItem).join("") : emptyState("Sem proximos vencimentos cadastrados.")}
+        ${nextLoans.length ? nextLoans.map(renderAgendaItem).join("") : emptyState("Sem próximos vencimentos cadastrados.")}
       </div>
     </section>
   `;
@@ -1689,7 +1689,7 @@ function renderAgendaItem(loan) {
         <strong>${escapeHtml(loan.name)}</strong>
         <span>${meta.detail} - ${formatDate(loan.dueDate)}</span>
       </div>
-      <button class="icon-button" type="button" data-action="open-loan-menu" data-loan-id="${loan.id}" aria-label="Acoes">
+      <button class="icon-button" type="button" data-action="open-loan-menu" data-loan-id="${loan.id}" aria-label="Ações">
         <i class="fa-solid fa-ellipsis"></i>
       </button>
     </article>
@@ -1701,12 +1701,12 @@ function renderReports() {
   const periodStats = getPeriodStats();
 
   dom.screens.reports.innerHTML = `
-    ${renderHeader("Relatorios", "Lucro, recebimentos, atrasos e evolucao mensal.", "dashboard")}
+    ${renderHeader("Relatórios", "Lucro, recebimentos, atrasos e evolução mensal.", "dashboard")}
 
-    <div class="period-pills" role="tablist" aria-label="Periodo do relatorio">
+    <div class="period-pills" role="tablist" aria-label="Período do relatório">
       ${periodButton("today", "Hoje")}
       ${periodButton("week", "7 dias")}
-      ${periodButton("month", "Mes")}
+      ${periodButton("month", "Mês")}
       ${periodButton("year", "Ano")}
       ${periodButton("all", "Tudo")}
     </div>
@@ -1793,13 +1793,13 @@ function periodButton(period, label) {
 
 function renderSettings() {
   dom.screens.settings.innerHTML = `
-    ${renderHeader("Configuracoes", "Padroes, backup e seguranca.", "dashboard")}
+    ${renderHeader("Configurações", "Padrões, backup e segurança.", "dashboard")}
 
     <form class="form-panel" id="settings-form">
       <section class="settings-group">
         <div>
           <h3>Carteira</h3>
-          <p>Defina quanto existe disponivel para novos emprestimos.</p>
+          <p>Defina quanto existe disponível para novos empréstimos.</p>
         </div>
         <label class="field">
           <span>Saldo disponível</span>
@@ -1810,7 +1810,7 @@ function renderSettings() {
       <section class="settings-group">
         <div>
           <h3>Regras financeiras</h3>
-          <p>Padroes usados ao cadastrar novos emprestimos.</p>
+          <p>Padrões usados ao cadastrar novos empréstimos.</p>
         </div>
       <div class="form-grid">
         <label class="field">
@@ -1826,35 +1826,35 @@ function renderSettings() {
 
       <section class="settings-group">
         <div>
-          <h3>Seguranca</h3>
+          <h3>Segurança</h3>
           <p>Proteja o acesso local neste navegador.</p>
         </div>
       <section class="settings-security">
         <label class="switch-row">
           <span>
-            <strong>Protecao por PIN</strong>
+            <strong>Proteção por PIN</strong>
             <small>${state.settings.pinEnabled ? "Ativa neste navegador" : "Desativada"}</small>
           </span>
           <input type="checkbox" name="pinEnabled" ${state.settings.pinEnabled ? "checked" : ""} />
         </label>
         <label class="field">
           <span>${state.settings.pinEnabled ? "Alterar PIN" : "Criar PIN"}</span>
-          <input type="password" name="pin" inputmode="numeric" minlength="4" placeholder="Minimo 4 digitos" />
+          <input type="password" name="pin" inputmode="numeric" minlength="4" placeholder="Mínimo 4 dígitos" />
         </label>
       </section>
       </section>
       <button class="button button-primary" type="submit">
         <i class="fa-solid fa-floppy-disk"></i>
-        Salvar configuracoes
+        Salvar configurações
       </button>
     </form>
 
     <section class="section-block">
       <div class="action-grid">
         ${actionCard("Exportar backup", "Baixar JSON com a carteira atual", "fa-download", "export")}
-        ${actionCard("Exportar CSV", "Planilha simples para conferencia externa", "fa-file-csv", "export-csv")}
+        ${actionCard("Exportar CSV", "Planilha simples para conferência externa", "fa-file-csv", "export-csv")}
         ${actionCard("Importar backup", "Restaurar arquivo JSON", "fa-upload", "import")}
-        ${actionCard("Limpar dados", "Apagar todos os emprestimos salvos", "fa-trash", "clear-data")}
+        ${actionCard("Limpar dados", "Apagar todos os empréstimos salvos", "fa-trash", "clear-data")}
         ${actionCard("Bloquear agora", "Exigir PIN imediatamente", "fa-lock", "lock-app")}
       </div>
       <input class="hidden" type="file" id="import-file" accept="application/json" />
@@ -1863,7 +1863,7 @@ function renderSettings() {
     <section class="section-block panel-card">
       <div class="section-head">
         <div>
-          <h3>Seguranca dos dados</h3>
+          <h3>Segurança dos dados</h3>
           <p>O app continua local e privado. Use backup JSON para trocar de aparelho.</p>
         </div>
       </div>
@@ -1888,7 +1888,7 @@ function renderDrawer() {
         <img src="./assets/tsdb-mark.svg" alt="" />
       </div>
       <div>
-        <strong>TSDB Emprestimos</strong>
+        <strong>TSDB Empréstimos</strong>
         <span>Carteira premium</span>
       </div>
       <button class="icon-button" type="button" data-action="close-drawer" aria-label="Fechar menu">
@@ -1899,23 +1899,23 @@ function renderDrawer() {
     <section class="drawer-balance">
       <span>Saldo disponível</span>
       <strong>${formatCurrency(metrics.walletAvailable)}</strong>
-      <small>${metrics.active.length} operacao(oes) ativa(s)</small>
+      <small>${metrics.active.length} operação(ões) ativa(s)</small>
     </section>
 
-    <nav class="drawer-groups" aria-label="Opcoes do aplicativo">
+    <nav class="drawer-groups" aria-label="Opções do aplicativo">
       ${drawerGroup("Carteira", "fa-vault", true, [
-        drawerButton("dashboard", "Inicio", "Painel principal", "fa-house"),
-        drawerButton("wallet", "Carteira", "Saldo e movimentacoes", "fa-vault"),
+        drawerButton("dashboard", "Início", "Painel principal", "fa-house"),
+        drawerButton("wallet", "Carteira", "Saldo e movimentações", "fa-vault"),
         drawerButton("settings", "Saldo disponível", "Ajustar carteira", "fa-coins"),
-        drawerButton("reports", "Relatorios", "Indicadores e lucro", "fa-chart-column")
+        drawerButton("reports", "Relatórios", "Indicadores e lucro", "fa-chart-column")
       ])}
-      ${drawerGroup("Operacoes", "fa-briefcase", false, [
-        drawerButton("new-loan", "Novo emprestimo", "Cadastrar operacao", "fa-plus"),
+      ${drawerGroup("Operações", "fa-briefcase", false, [
+        drawerButton("new-loan", "Novo empréstimo", "Cadastrar operação", "fa-plus"),
         drawerButton("clients", "Clientes", "Lista limpa por pessoa", "fa-users"),
-        drawerButton("loans", "Emprestimos", "Lista e cobrancas", "fa-wallet"),
+        drawerButton("loans", "Empréstimos", "Lista e cobranças", "fa-wallet"),
         drawerButton("calendar", "Agenda", "Vencimentos", "fa-calendar-days")
       ])}
-      ${drawerGroup("Dados e seguranca", "fa-shield-halved", false, [
+      ${drawerGroup("Dados e segurança", "fa-shield-halved", false, [
         drawerButton("export", "Backup JSON", "Exportar carteira", "fa-download"),
         drawerButton("export-csv", "Exportar CSV", "Baixar planilha", "fa-file-csv"),
         drawerButton("import", "Importar JSON", "Restaurar backup", "fa-upload"),
@@ -2078,7 +2078,7 @@ function submitPayment(event) {
   }
 
   if (!selectedLoan) {
-    alert("Emprestimo nao encontrado.");
+    alert("Empréstimo não encontrado.");
     return;
   }
 
@@ -2126,11 +2126,11 @@ function deleteLoan(loanId) {
     return;
   }
 
-  if (!confirm("Excluir o emprestimo de " + loan.name + "?")) {
+  if (!confirm("Excluir o empréstimo de " + loan.name + "?")) {
     return;
   }
 
-  addAudit("delete", "Emprestimo excluido: " + loan.name + ".", loanId);
+  addAudit("delete", "Empréstimo excluído: " + loan.name + ".", loanId);
   updateWalletAvailable(loan.principal - loan.paidAmount, {
     type: "delete",
     label: "Exclusao ajustou saldo de " + loan.name,
@@ -2167,7 +2167,7 @@ function whatsappLink(loan, template = "default") {
     friendly:
       "Ol\u00e1 " +
       loan.name +
-      ", tudo bem? Passando so para lembrar com antecedencia do nosso combinado. Vencimento: " +
+      ", tudo bem? Passando só para lembrar com antecedência do nosso combinado. Vencimento: " +
       dueDate +
       ". Valor atualizado: " +
       value +
@@ -2175,19 +2175,19 @@ function whatsappLink(loan, template = "default") {
     firm:
       "Ol\u00e1 " +
       loan.name +
-      ". Preciso alinhar a regularizacao do emprestimo com vencimento em " +
+      ". Preciso alinhar a regularização do empréstimo com vencimento em " +
       dueDate +
-      ". Valor atualizado ate hoje: " +
+      ". Valor atualizado até hoje: " +
       value +
       ". Fico no aguardo do retorno.",
     late:
       "Ol\u00e1 " +
       loan.name +
-      ". O emprestimo esta em atraso ha " +
+      ". O empréstimo está em atraso há " +
       loan.lateDays +
-      " dia(s). O valor atualizado ate hoje e " +
+      " dia(s). O valor atualizado até hoje é " +
       value +
-      ". Por favor, me envie uma previsao de pagamento."
+      ". Por favor, me envie uma previsão de pagamento."
   };
   const message = messages[template] || messages.default;
 
@@ -2225,25 +2225,25 @@ function printLoanDocument(loanId, type) {
     return;
   }
 
-  const title = type === "receipt" ? "Recibo de pagamento" : "Termo de emprestimo";
+  const title = type === "receipt" ? "Recibo de pagamento" : "Termo de empréstimo";
   const body =
     type === "receipt"
       ? `
-        <p>Recebi de <strong>${escapeHtml(loan.name)}</strong> o valor de <strong>${formatCurrency(latestPayment.amount)}</strong> referente ao emprestimo com vencimento em <strong>${formatDate(loan.dueDate)}</strong>.</p>
+        <p>Recebi de <strong>${escapeHtml(loan.name)}</strong> o valor de <strong>${formatCurrency(latestPayment.amount)}</strong> referente ao empréstimo com vencimento em <strong>${formatDate(loan.dueDate)}</strong>.</p>
         <p>Data do pagamento: <strong>${formatDate(latestPayment.paidAt)}</strong></p>
-        <p>Metodo: <strong>${escapeHtml(latestPayment.method || "Nao informado")}</strong></p>
-        <p>Saldo atualizado apos registros: <strong>${formatCurrency(loan.balance)}</strong></p>
+        <p>Método: <strong>${escapeHtml(latestPayment.method || "Não informado")}</strong></p>
+        <p>Saldo atualizado após registros: <strong>${formatCurrency(loan.balance)}</strong></p>
       `
       : `
         <p>Cliente: <strong>${escapeHtml(loan.name)}</strong></p>
-        <p>Telefone: <strong>${escapeHtml(loan.phone || "Nao informado")}</strong></p>
+        <p>Telefone: <strong>${escapeHtml(loan.phone || "Não informado")}</strong></p>
         <p>Valor emprestado: <strong>${formatCurrency(loan.principal)}</strong></p>
         <p>Juros contratado: <strong>${formatPercent(loan.interestRate)}</strong></p>
         <p>Total original: <strong>${formatCurrency(loan.totalOriginal)}</strong></p>
-        <p>Data do emprestimo: <strong>${formatDate(loan.issueDate)}</strong></p>
+        <p>Data do empréstimo: <strong>${formatDate(loan.issueDate)}</strong></p>
         <p>Data de vencimento: <strong>${formatDate(loan.dueDate)}</strong></p>
         <p>Juros por atraso: <strong>${formatPercent(loan.dailyLateRate)} ao dia</strong></p>
-        <p>Observacoes: ${escapeHtml(loan.notes || "Sem observacoes.")}</p>
+        <p>Observações: ${escapeHtml(loan.notes || "Sem observações.")}</p>
       `;
 
   const win = window.open("", "_blank");
@@ -2270,7 +2270,7 @@ function printLoanDocument(loanId, type) {
       <body>
         <main class="doc">
           <h1>${title}</h1>
-          <p class="muted">Documento gerado pelo TSDB Emprestimos em ${formatDate(todayIso())}.</p>
+          <p class="muted">Documento gerado pelo TSDB Empréstimos em ${formatDate(todayIso())}.</p>
           ${body}
           <section class="sign">
             <div class="line">Credor</div>
@@ -2346,7 +2346,7 @@ async function hashPin(pin) {
 
 function lockApp() {
   if (!state.settings.pinEnabled || !state.settings.pinHash) {
-    alert("Ative e salve um PIN nas configuracoes antes de bloquear.");
+    alert("Ative e salve um PIN nas configurações antes de bloquear.");
     return;
   }
 
@@ -2428,7 +2428,7 @@ async function saveSettingsFromForm(event) {
   saveSettings();
   saveData();
   render();
-  alert("Configuracoes salvas.");
+  alert("Configurações salvas.");
 }
 
 function exportBackup() {
@@ -2472,11 +2472,11 @@ function importBackup(event) {
       render();
       alert("Backup importado.");
     })
-    .catch(() => alert("Nao foi possivel importar este arquivo."));
+    .catch(() => alert("Não foi possível importar este arquivo."));
 }
 
 function clearData() {
-  if (!confirm("Limpar todos os dados do TSDB Emprestimos?")) {
+  if (!confirm("Limpar todos os dados do TSDB Empréstimos?")) {
     return;
   }
 
