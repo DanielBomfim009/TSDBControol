@@ -1600,7 +1600,7 @@ function renderNewLoan() {
           <span>Juros por atraso (% ao dia)</span>
           <input name="dailyLateRate" type="text" inputmode="decimal" value="${escapeHtml(draft.dailyLateRate)}" required />
         </label>
-        <div class="form-grid">
+        <div class="form-grid date-grid">
           <label class="field">
             <span>Data do empréstimo</span>
             <input name="issueDate" type="date" value="${draft.issueDate}" required />

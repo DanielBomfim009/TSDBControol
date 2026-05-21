@@ -91,6 +91,32 @@ textarea {
   line-height: 1.25;
 }
 
+input[type="date"] {
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  min-width: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  overflow: hidden;
+  padding-right: 10px;
+  letter-spacing: -0.01em;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  width: 18px;
+  height: 18px;
+  margin: 0 0 0 4px;
+  padding: 0;
+  opacity: 0.82;
+  filter: sepia(1) saturate(1.7) hue-rotate(352deg) brightness(1.08);
+}
+
 h1,
 h2,
 h3,
@@ -1452,6 +1478,8 @@ textarea {
   display: grid;
   gap: 8px;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .field span {
@@ -1464,6 +1492,12 @@ textarea {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.date-grid {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .preview-card-highlight .preview-grid {
