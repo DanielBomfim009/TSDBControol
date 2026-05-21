@@ -7,6 +7,7 @@ const defaultSettings = {
   defaultInterestRate: 30,
   defaultDailyLateRate: 2,
   walletAvailable: 0,
+  walletSetupDone: false,
   pinEnabled: false,
   pinHash: ""
 };
@@ -27,7 +28,9 @@ const state = {
 
 const dom = {
   loading: document.querySelector("#loading-screen"),
+  appDevice: document.querySelector(".app-device"),
   screens: {
+    walletSetup: document.querySelector("#screen-wallet-setup"),
     dashboard: document.querySelector("#screen-dashboard"),
     wallet: document.querySelector("#screen-wallet"),
     clients: document.querySelector("#screen-clients"),
@@ -531,6 +534,22 @@ function updateWalletAvailable(delta, movement = {}) {
   saveSettings();
 }
 
+function completeWalletSetup(amount = 0, movementLabel = "") {
+  const value = Math.max(parseNumber(amount), 0);
+  state.settings.walletAvailable = value;
+  state.settings.walletSetupDone = true;
+
+  if (value > 0 && movementLabel) {
+    addWalletMovement("setup", value, movementLabel);
+    addAudit("wallet", movementLabel + " em " + formatCurrency(value) + ".");
+  }
+
+  saveSettings();
+  saveData();
+  render();
+  setScreen("dashboard");
+}
+
 function addWalletMovement(type, amount, label, loanId = "") {
   state.data.walletMovements = Array.isArray(state.data.walletMovements) ? state.data.walletMovements : [];
   state.data.walletMovements.unshift({
@@ -753,6 +772,7 @@ function statusMeta(loan) {
 }
 
 function render() {
+  renderWalletSetup();
   renderDashboard();
   renderWallet();
   renderClients();
@@ -774,6 +794,7 @@ function setScreen(screen) {
   dom.navItems.forEach((item) => {
     item.classList.toggle("is-active", item.dataset.nav === screen);
   });
+  dom.appDevice.classList.toggle("is-setup-mode", screen === "walletSetup");
 }
 
 function renderHeader(title, subtitle, backAction, actions = "") {
@@ -795,6 +816,52 @@ function renderHeader(title, subtitle, backAction, actions = "") {
       <div class="header-actions">${actions}</div>
     </header>
   `;
+}
+
+function shouldShowWalletSetup() {
+  return (
+    !state.settings.walletSetupDone &&
+    getWalletAvailable() <= 0 &&
+    !state.data.loans.length &&
+    !(state.data.walletMovements || []).length
+  );
+}
+
+function renderWalletSetup() {
+  dom.screens.walletSetup.innerHTML = `
+    <section class="setup-layout">
+      <div class="setup-brand">
+        <img src="./assets/tsdb-logo.svg" alt="TSDB Empréstimos" />
+      </div>
+
+      <form class="setup-card" id="wallet-setup-form">
+        <span class="eyebrow">Primeiro acesso</span>
+        <h1>Defina seu saldo disponível</h1>
+        <p>Esse é o capital livre que você tem para emprestar. Cada novo lançamento desconta desse saldo automaticamente.</p>
+
+        <label class="field setup-balance-field">
+          <span>Saldo disponível</span>
+          <input name="walletAvailable" type="text" inputmode="decimal" data-money placeholder="0,00" autocomplete="off" required />
+        </label>
+
+        <button class="button button-primary" type="submit">
+          <i class="fa-solid fa-vault"></i>
+          Salvar saldo
+        </button>
+        <button class="button button-ghost" type="button" data-action="skip-wallet-setup">
+          Definir depois
+        </button>
+      </form>
+
+      <div class="setup-benefits" aria-label="Recursos da carteira">
+        <span><i class="fa-solid fa-minus"></i> Desconta empréstimos</span>
+        <span><i class="fa-solid fa-plus"></i> Soma pagamentos</span>
+        <span><i class="fa-solid fa-chart-line"></i> Atualiza relatórios</span>
+      </div>
+    </section>
+  `;
+
+  document.querySelector("#wallet-setup-form").addEventListener("submit", saveInitialWallet);
 }
 
 function renderDashboard() {
@@ -1493,26 +1560,23 @@ function renderNewLoan() {
     )}
 
     <form class="form-panel loan-form-panel" id="loan-form">
-      <section class="preview-card preview-card-highlight">
+      <section class="loan-preview-mini">
         <div class="preview-hero">
           <span class="eyebrow">Prévia</span>
-          <h3>Total a receber</h3>
           <strong data-preview="total">${formatCurrency(preview.totalOriginal)}</strong>
+          <small>Total a receber</small>
         </div>
-        <div class="preview-grid">
+        <div class="preview-mini-grid">
           ${previewItem("Juros", formatCurrency(preview.interestAmount), "interest")}
-          ${previewItem("Saldo após cadastro", formatCurrency(preview.walletAfter), "wallet")}
-          ${previewItem("Status previsto", preview.status, "status")}
-          ${previewItem("+3 dias de atraso", formatCurrency(preview.lateProjection), "late")}
+          ${previewItem("Saldo", formatCurrency(preview.walletAfter), "wallet")}
+          ${previewItem("Atraso 3d", formatCurrency(preview.lateProjection), "late")}
         </div>
       </section>
 
-      <section class="form-section">
-        <div class="form-section-title">
-          <i class="fa-solid fa-user-check"></i>
-          <div>
-            <h3>Cliente</h3>
-          </div>
+      <section class="form-section form-section-direct">
+        <div class="form-section-title compact-form-title">
+          <i class="fa-solid fa-file-invoice-dollar"></i>
+          <h3>Dados do empréstimo</h3>
         </div>
         <label class="field">
           <span>Nome</span>
@@ -1522,15 +1586,6 @@ function renderNewLoan() {
           <span>Telefone</span>
           <input name="phone" type="tel" value="${escapeHtml(draft.phone)}" placeholder="(71) 99999-9999" />
         </label>
-      </section>
-
-      <section class="form-section">
-        <div class="form-section-title">
-          <i class="fa-solid fa-coins"></i>
-          <div>
-            <h3>Valores</h3>
-          </div>
-        </div>
         <div class="form-grid">
           <label class="field">
             <span>Valor emprestado</span>
@@ -1545,15 +1600,6 @@ function renderNewLoan() {
           <span>Juros por atraso (% ao dia)</span>
           <input name="dailyLateRate" type="text" inputmode="decimal" value="${escapeHtml(draft.dailyLateRate)}" required />
         </label>
-      </section>
-
-      <section class="form-section">
-        <div class="form-section-title">
-          <i class="fa-solid fa-calendar-check"></i>
-          <div>
-            <h3>Datas e observações</h3>
-          </div>
-        </div>
         <div class="form-grid">
           <label class="field">
             <span>Data do empréstimo</span>
@@ -1667,6 +1713,26 @@ function updatePreviewPanel() {
       target.textContent = value;
     });
   });
+}
+
+function saveInitialWallet(event) {
+  event.preventDefault();
+  blurActiveControl();
+  const amount = parseNumber(new FormData(event.currentTarget).get("walletAvailable"));
+
+  if (amount <= 0) {
+    alert("Informe um saldo maior que zero ou escolha Definir depois.");
+    return;
+  }
+
+  completeWalletSetup(amount, "Saldo inicial configurado");
+}
+
+function skipWalletSetup() {
+  state.settings.walletSetupDone = true;
+  saveSettings();
+  render();
+  setScreen("dashboard");
 }
 
 function previewItem(label, value, key) {
@@ -2499,6 +2565,7 @@ async function saveSettingsFromForm(event) {
   const nextWallet = parseNumber(data.get("walletAvailable"));
   const walletDiff = nextWallet - previousWallet;
   state.settings.walletAvailable = nextWallet;
+  state.settings.walletSetupDone = true;
   state.settings.defaultInterestRate = parseNumber(data.get("defaultInterestRate"));
   state.settings.defaultDailyLateRate = parseNumber(data.get("defaultDailyLateRate"));
   const wantsPin = data.get("pinEnabled") === "on";
@@ -2783,6 +2850,10 @@ function bindEvents() {
       applyDefaults();
     }
 
+    if (action === "skip-wallet-setup") {
+      skipWalletSetup();
+    }
+
     if (action === "export") {
       closeDrawer();
       exportBackup();
@@ -2823,7 +2894,7 @@ function bindEvents() {
 function boot() {
   bindEvents();
   render();
-  setScreen("dashboard");
+  setScreen(shouldShowWalletSetup() ? "walletSetup" : "dashboard");
   setTimeout(() => dom.loading.classList.add("is-hidden"), 600);
   if (state.settings.pinEnabled && state.settings.pinHash) {
     setTimeout(lockApp, 720);

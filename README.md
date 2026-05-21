@@ -15,10 +15,11 @@ Aplicativo financeiro premium para controle pessoal de empréstimos, juros, atra
 ## Funcionalidades
 
 - Dashboard inicial com totais, lucro, clientes, vencimentos e atrasados.
+- Tela inicial de configuração do primeiro saldo disponível da carteira.
 - Saldo disponível da carteira com atualização automática por empréstimos e pagamentos.
 - Tela Carteira com histórico automático de movimentações do saldo.
 - Tela Clientes com lista limpa e detalhes completos somente após selecionar um cliente.
-- Cadastro e edição de empréstimos com cálculo em tempo real.
+- Cadastro e edição de empréstimos com formulário direto e cálculo em tempo real.
 - Juros contratado automático.
 - Juros diário por atraso automático.
 - Status automáticos: em dia, vence hoje, próximo do vencimento, atrasado e pago.

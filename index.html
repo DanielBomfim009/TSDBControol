@@ -20,7 +20,7 @@
       crossorigin="anonymous"
       referrerpolicy="no-referrer"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260521-premium-charts-v3" />
+    <link rel="stylesheet" href="./styles.css?v=20260521-wallet-setup-v1" />
   </head>
   <body>
     <div class="loading-screen" id="loading-screen" aria-hidden="true">
@@ -37,6 +37,7 @@
     <main class="app-shell">
       <div class="app-device" aria-live="polite">
         <section class="app-content">
+          <section class="screen" id="screen-wallet-setup" data-screen-panel="wallet-setup"></section>
           <section class="screen is-active" id="screen-dashboard" data-screen-panel="dashboard"></section>
           <section class="screen" id="screen-wallet" data-screen-panel="wallet"></section>
           <section class="screen" id="screen-clients" data-screen-panel="clients"></section>
@@ -170,6 +171,6 @@
       </form>
     </div>
 
-    <script src="./app.js?v=20260521-premium-charts-v3" defer></script>
+    <script src="./app.js?v=20260521-wallet-setup-v1" defer></script>
   </body>
 </html>
