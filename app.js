@@ -250,6 +250,21 @@ function formatCurrency(value) {
   }).format(Number(value || 0));
 }
 
+function formatShortCurrency(value) {
+  const amount = Number(value || 0);
+
+  if (Math.abs(amount) < 1000) {
+    return formatCurrency(amount);
+  }
+
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    notation: "compact",
+    maximumFractionDigits: 1
+  }).format(amount);
+}
+
 function formatDate(value) {
   if (!value) {
     return "-";
@@ -660,6 +675,46 @@ function getPeriodStats(period = state.reportPeriod) {
   };
 }
 
+function monthKey(date) {
+  const parsed = date instanceof Date ? date : parseDate(date);
+  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getMonthlySeries(months = 6) {
+  const formatter = new Intl.DateTimeFormat("pt-BR", { month: "short" });
+  const anchor = today();
+  anchor.setDate(1);
+
+  const rows = [];
+  for (let index = months - 1; index >= 0; index -= 1) {
+    const date = new Date(anchor.getFullYear(), anchor.getMonth() - index, 1, 12);
+    rows.push({
+      key: monthKey(date),
+      label: formatter.format(date).replace(".", ""),
+      lent: 0,
+      received: 0
+    });
+  }
+
+  const byKey = new Map(rows.map((row) => [row.key, row]));
+
+  getLoans().forEach((loan) => {
+    const loanMonth = byKey.get(monthKey(loan.issueDate));
+    if (loanMonth) {
+      loanMonth.lent += loan.principal;
+    }
+
+    (loan.payments || []).forEach((payment) => {
+      const paymentMonth = byKey.get(monthKey(payment.paidAt));
+      if (paymentMonth) {
+        paymentMonth.received += parseNumber(payment.amount);
+      }
+    });
+  });
+
+  return rows;
+}
+
 function statusMeta(loan) {
   const map = {
     paid: {
@@ -744,7 +799,8 @@ function renderHeader(title, subtitle, backAction, actions = "") {
 
 function renderDashboard() {
   const metrics = getMetrics();
-  const attentionLoans = [...metrics.overdue, ...metrics.dueToday].slice(0, 4);
+  const attentionLoans = [...metrics.overdue, ...metrics.dueToday].slice(0, 3);
+  const upcomingLoans = attentionLoans.length ? attentionLoans : metrics.dueSoon.slice(0, 3);
 
   dom.screens.dashboard.innerHTML = `
     ${renderHeader(
@@ -754,85 +810,54 @@ function renderDashboard() {
       `<button class="icon-button" type="button" data-action="calendar" aria-label="Alertas"><i class="fa-regular fa-bell"></i></button>`
     )}
 
-    <section class="section-block wallet-panel">
-      <div>
+    <section class="section-block wallet-panel dashboard-hero">
+      <div class="hero-main">
         <span class="eyebrow">Carteira</span>
         <h2>Saldo disponível</h2>
         <strong>${formatCurrency(metrics.walletAvailable)}</strong>
+        <small>${metrics.activeClients} cliente(s) ativo(s) · ${metrics.overdue.length} atraso(s)</small>
       </div>
-      <button class="button button-secondary" type="button" data-action="wallet">
-        <i class="fa-solid fa-vault"></i>
-        Ver carteira
-      </button>
+      <div class="hero-meter" aria-label="Carteira em aberto">
+        <span>${formatShortCurrency(metrics.totalReceivable)}</span>
+        <small>A receber</small>
+      </div>
     </section>
 
-    <section class="section-block priority-strip">
-      <button type="button" data-action="wallet">
-        <span>Carteira</span>
-        <strong>${formatCurrency(metrics.walletAvailable)}</strong>
-      </button>
-      <button type="button" data-action="clients">
-        <span>Clientes ativos</span>
-        <strong>${metrics.activeClients}</strong>
-      </button>
-      <button type="button" data-action="filter-overdue">
-        <span>Atrasados</span>
-        <strong class="status-red">${metrics.overdue.length}</strong>
-      </button>
-    </section>
-
-    <section class="section-block">
-      <div class="section-head">
-        <div>
-          <h2>Resumo geral</h2>
-        </div>
-      </div>
-      <div class="metric-grid">
+    <section class="section-block dashboard-summary">
+      <div class="metric-grid metric-grid-compact">
         ${metricCard("A receber", metrics.totalReceivable, "Saldo aberto", "green", "fa-sack-dollar", "loans")}
-        ${metricCard("Emprestado", metrics.totalPrincipal, "Capital lançado", "blue", "fa-scale-balanced", "reports")}
+        ${metricCard("Emprestado", metrics.totalPrincipal, "Capital aplicado", "blue", "fa-scale-balanced", "reports")}
         ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.overdue.length} operação(ões)`, "red", "fa-triangle-exclamation", "filter-overdue")}
-        ${metricCard("Lucro recebido", metrics.profitReceived, "Realizado", "green", "fa-chart-line", "reports")}
+        ${metricCard("Lucro", metrics.profitReceived, "Recebido", "green", "fa-chart-line", "reports")}
       </div>
     </section>
 
-    <section class="section-block">
-      <div class="action-grid">
-        ${actionCard("Novo empréstimo", "", "fa-plus", "new-loan")}
-        ${actionCard("Clientes", "", "fa-users", "clients")}
-        ${actionCard("Empréstimos", "", "fa-wallet", "loans")}
-        ${actionCard("Agenda", "", "fa-calendar-days", "calendar")}
-      </div>
+    <section class="section-block dashboard-visuals">
+      ${renderPortfolioDonut(metrics, "Visão geral")}
+      ${renderTrendChart(getMonthlySeries(), "Evolução mensal")}
     </section>
 
-    <section class="section-block panel-card">
+    <section class="section-block quick-actions">
+      ${quickAction("Novo", "fa-plus", "new-loan")}
+      ${quickAction("Clientes", "fa-users", "clients")}
+      ${quickAction("Carteira", "fa-vault", "wallet")}
+      ${quickAction("Agenda", "fa-calendar-days", "calendar")}
+    </section>
+
+    <section class="section-block panel-card compact-panel">
       <div class="section-head">
-        <div>
-          <h3>Status da carteira</h3>
-        </div>
+        <h3>${attentionLoans.length ? "Atenção agora" : "Próximos vencimentos"}</h3>
+        <button class="link-button" type="button" data-action="calendar">Agenda</button>
       </div>
-      <div class="status-list">
-        ${legendRow("Em dia", metrics.totalOnTime, "green")}
-        ${legendRow("Atrasados", metrics.totalOverdue, "red")}
-        ${legendRow("Pagos", metrics.totalPaid, "blue")}
+      <div class="loan-list compact-list">
+        ${upcomingLoans.length ? upcomingLoans.map(renderLoanCard).join("") : emptyState("Nenhuma cobrança urgente agora.")}
       </div>
     </section>
 
-    <section class="section-block">
-      <div class="section-head">
-        <div>
-          <h3>Hoje e atrasados</h3>
-        </div>
-        <button class="link-button" type="button" data-action="calendar">Ver agenda</button>
-      </div>
-      <div class="loan-list">
-        ${attentionLoans.length ? attentionLoans.map(renderLoanCard).join("") : emptyState("Nenhuma cobrança urgente agora.")}
-      </div>
-    </section>
-
-    <section class="section-block">
+    <section class="section-block panel-card compact-panel">
       <div class="section-head">
         <h3>Pagamentos recentes</h3>
-        <button class="link-button" type="button" data-action="wallet">Ver carteira</button>
+        <button class="link-button" type="button" data-action="wallet">Carteira</button>
       </div>
       <div class="recent-list">
         ${renderRecentPayments()}
@@ -847,6 +872,16 @@ function metricCard(title, value, caption, tone, icon, action) {
       <span class="metric-icon ${tone}"><i class="fa-solid ${icon}"></i></span>
       <span>${title}</span>
       <strong>${typeof value === "number" ? formatCurrency(value) : value}</strong>
+      ${caption ? `<small>${escapeHtml(caption)}</small>` : ""}
+    </button>
+  `;
+}
+
+function quickAction(title, icon, action) {
+  return `
+    <button class="quick-action" type="button" data-action="${action}">
+      <i class="fa-solid ${icon}"></i>
+      <span>${title}</span>
     </button>
   `;
 }
@@ -882,6 +917,89 @@ function legendRow(label, value, tone) {
       <span>${label}</span>
       <strong>${typeof value === "number" ? formatCurrency(value) : escapeHtml(value)}</strong>
     </div>
+  `;
+}
+
+function percentOf(value, total) {
+  if (!total) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, Math.round((Number(value || 0) / total) * 100)));
+}
+
+function renderPortfolioDonut(metrics, title = "Status da carteira") {
+  const total = metrics.totalOnTime + metrics.totalOverdue + metrics.totalPaid;
+  const onTimePercent = percentOf(metrics.totalOnTime, total);
+  const overduePercent = percentOf(metrics.totalOverdue, total);
+  const gradient = total
+    ? `conic-gradient(var(--gold-main) 0 ${onTimePercent}%, var(--red) ${onTimePercent}% ${onTimePercent + overduePercent}%, var(--bronze) ${onTimePercent + overduePercent}% 100%)`
+    : "conic-gradient(rgba(244, 199, 93, 0.28) 0 100%)";
+
+  return `
+    <article class="chart-card chart">
+      <div class="section-head">
+        <h3>${title}</h3>
+        <span class="chart-caption">${metrics.lateRate}% atraso</span>
+      </div>
+      <div class="donut-layout">
+        <div class="donut-chart" style="--donut-gradient: ${gradient}">
+          <span>A receber</span>
+          <strong>${formatShortCurrency(metrics.totalReceivable)}</strong>
+          <small>${total ? onTimePercent : 0}% em dia</small>
+        </div>
+        <div class="status-list">
+          ${legendRow("Em dia", metrics.totalOnTime, "green")}
+          ${legendRow("Atrasados", metrics.totalOverdue, "red")}
+          ${legendRow("Pagos", metrics.totalPaid, "blue")}
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function renderTrendChart(series, title = "Evolução mensal") {
+  const width = 320;
+  const height = 154;
+  const paddingX = 22;
+  const top = 18;
+  const bottom = 28;
+  const maxValue = Math.max(...series.flatMap((item) => [item.lent, item.received]), 1);
+  const step = series.length > 1 ? (width - paddingX * 2) / (series.length - 1) : 0;
+  const y = (value) => height - bottom - (Number(value || 0) / maxValue) * (height - bottom - top);
+  const x = (index) => paddingX + step * index;
+  const linePoints = series.map((item, index) => `${x(index).toFixed(1)},${y(item.received).toFixed(1)}`).join(" ");
+  const areaPoints = `${paddingX},${height - bottom} ${linePoints} ${width - paddingX},${height - bottom}`;
+  const bars = series
+    .map((item, index) => {
+      const barWidth = 20;
+      const barHeight = height - bottom - y(item.lent);
+      return `<rect x="${(x(index) - barWidth / 2).toFixed(1)}" y="${y(item.lent).toFixed(1)}" width="${barWidth}" height="${Math.max(barHeight, item.lent ? 3 : 0).toFixed(1)}" rx="6"></rect>`;
+    })
+    .join("");
+  const labels = series
+    .map((item, index) => `<text x="${x(index).toFixed(1)}" y="${height - 7}" text-anchor="middle">${escapeHtml(item.label)}</text>`)
+    .join("");
+  const last = series[series.length - 1] || { received: 0, lent: 0 };
+
+  return `
+    <article class="chart-card chart trend-card">
+      <div class="section-head">
+        <h3>${title}</h3>
+        <span class="chart-caption">Recebido ${formatShortCurrency(last.received)}</span>
+      </div>
+      <svg class="trend-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Evolução mensal de valores emprestados e recebidos">
+        <line class="grid-line" x1="${paddingX}" y1="${height - bottom}" x2="${width - paddingX}" y2="${height - bottom}"></line>
+        <g class="bars">${bars}</g>
+        <polygon class="trend-area" points="${areaPoints}"></polygon>
+        <polyline class="trend-line" points="${linePoints}"></polyline>
+        <g class="month-labels">${labels}</g>
+      </svg>
+      <div class="chart-legend">
+        <span><i class="dot green"></i> Recebido</span>
+        <span><i class="bar-key"></i> Emprestado</span>
+      </div>
+    </article>
   `;
 }
 
@@ -1079,7 +1197,7 @@ function renderClientDetail(client) {
       <section class="timeline-card">
         <div class="section-head">
           <h4>Empréstimos do cliente</h4>
-          <button class="link-button" type="button" data-action="clear-client-selection">Fechar detalhe</button>
+          <button class="link-button" type="button" data-action="clear-client-selection">Fechar</button>
         </div>
         <div class="client-loan-list">
           ${client.loans.length ? client.loans.map(renderClientLoanItem).join("") : emptyState("Nenhum empréstimo para este cliente.")}
@@ -1699,6 +1817,7 @@ function renderAgendaItem(loan) {
 function renderReports() {
   const metrics = getMetrics();
   const periodStats = getPeriodStats();
+  const series = getMonthlySeries();
 
   dom.screens.reports.innerHTML = `
     ${renderHeader("Relatórios", "", "dashboard")}
@@ -1711,27 +1830,30 @@ function renderReports() {
       ${periodButton("all", "Tudo")}
     </div>
 
-    <section class="section-block">
-      <div class="metric-grid">
-        ${metricCard("Saldo disponível", metrics.walletAvailable, "Carteira livre", "green", "fa-vault", "settings")}
-        ${metricCard("Total emprestado", metrics.totalPrincipal, "Capital aplicado", "blue", "fa-money-bill-trend-up", "reports")}
-        ${metricCard("A receber", metrics.totalReceivable, "Saldo aberto", "blue", "fa-sack-dollar", "reports")}
-        ${metricCard("Recebido", metrics.totalPaid, "Pagamentos", "green", "fa-circle-dollar-to-slot", "reports")}
-        ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.lateRate}% da carteira`, "red", "fa-triangle-exclamation", "reports")}
-        ${metricCard("Lucro recebido", metrics.profitReceived, "Realizado", "green", "fa-chart-line", "reports")}
-        ${metricCard("Recebido no período", periodStats.received, `${periodStats.count} pagamento(s)`, "green", "fa-calendar-check", "reports")}
-        ${metricCard("Clientes ativos", String(metrics.activeClients), `${metrics.overdueClients} com atraso`, "blue", "fa-users", "clients")}
+    <section class="section-block reports-hero">
+      <div>
+        <span class="eyebrow">Resultado</span>
+        <h2>${formatCurrency(metrics.profitReceived)}</h2>
+        <p>Lucro recebido até hoje</p>
+      </div>
+      <div class="reports-period-card">
+        <span>Recebido no período</span>
+        <strong>${formatCurrency(periodStats.received)}</strong>
+        <small>${periodStats.count} pagamento(s)</small>
       </div>
     </section>
 
-    <section class="section-block panel-card">
-      <div class="section-head">
-        <h3>Resumo por status</h3>
-      </div>
-      <div class="status-list">
-        ${legendRow("Em dia", metrics.totalOnTime, "green")}
-        ${legendRow("Atrasados", metrics.totalOverdue, "red")}
-        ${legendRow("Pagos", metrics.totalPaid, "blue")}
+    <section class="section-block report-charts">
+      ${renderTrendChart(series, "Evolução financeira")}
+      ${renderPortfolioDonut(metrics, "Resumo por status")}
+    </section>
+
+    <section class="section-block">
+      <div class="metric-grid metric-grid-compact">
+        ${metricCard("A receber", metrics.totalReceivable, "Saldo aberto", "green", "fa-sack-dollar", "loans")}
+        ${metricCard("Emprestado", metrics.totalPrincipal, "Capital aplicado", "blue", "fa-money-bill-trend-up", "reports")}
+        ${metricCard("Recebido", metrics.totalPaid, "Pagamentos", "green", "fa-circle-dollar-to-slot", "reports")}
+        ${metricCard("Atrasado", metrics.totalOverdue, `${metrics.lateRate}% da carteira`, "red", "fa-triangle-exclamation", "filter-overdue")}
       </div>
     </section>
 
@@ -1740,6 +1862,7 @@ function renderReports() {
         <div>
           <h3>Clientes em destaque</h3>
         </div>
+        <button class="link-button" type="button" data-action="clients">Ver clientes</button>
       </div>
       <div class="client-loan-list">
         ${renderClientRiskRows(metrics.clientGroups)}
@@ -1991,7 +2114,7 @@ function openLoanMenu(loanId) {
     </button>
     <button class="button button-secondary" type="button" data-action="whatsapp" data-loan-id="${loan.id}">
       <i class="fa-brands fa-whatsapp"></i>
-      Cobrar padrao
+      Cobrança padrão
     </button>
     <button class="button button-secondary" type="button" data-action="whatsapp-template" data-template="friendly" data-loan-id="${loan.id}">
       <i class="fa-regular fa-comment-dots"></i>
@@ -1999,7 +2122,7 @@ function openLoanMenu(loanId) {
     </button>
     <button class="button button-secondary" type="button" data-action="whatsapp-template" data-template="firm" data-loan-id="${loan.id}">
       <i class="fa-solid fa-bolt"></i>
-      Cobranca firme
+      Cobrança firme
     </button>
     <button class="button button-secondary" type="button" data-action="whatsapp-template" data-template="late" data-loan-id="${loan.id}">
       <i class="fa-solid fa-triangle-exclamation"></i>

@@ -28,7 +28,7 @@ Aplicativo financeiro premium para controle pessoal de empréstimos, juros, atra
 - Menu hambúrguer com atalhos operacionais.
 - Registro de pagamentos.
 - Histórico e auditoria por empréstimo.
-- Relatórios com gráficos Chart.js.
+- Relatórios com gráficos premium em SVG/CSS, sem depender de build.
 - Períodos de relatório: hoje, 7 dias, mês, ano e tudo.
 - Backup JSON, exportação CSV, importação, limpeza de dados e configurações padrão.
 - Cobrança via WhatsApp com mensagens rápidas por contexto.
