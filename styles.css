@@ -181,10 +181,13 @@ textarea {
 }
 
 .app-shell {
+  width: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   padding: 18px;
+  overflow: hidden;
 }
 
 .app-device {
@@ -192,7 +195,8 @@ textarea {
   width: min(100%, 440px);
   height: min(920px, calc(100vh - 36px));
   height: min(920px, calc(100dvh - 36px));
-  min-height: 680px;
+  min-height: min(680px, calc(100vh - 36px));
+  min-height: min(680px, calc(100dvh - 36px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -212,7 +216,7 @@ textarea {
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  padding: 26px 16px calc(var(--nav-height) + 104px);
+  padding: 26px 16px calc(var(--nav-height) + var(--fab-size) + 48px + env(safe-area-inset-bottom));
 }
 
 .app-content::-webkit-scrollbar {
@@ -1289,7 +1293,7 @@ textarea {
   position: absolute;
   left: 12px;
   right: 12px;
-  bottom: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
   z-index: 10;
   height: var(--nav-height);
   display: grid;
@@ -1351,7 +1355,7 @@ textarea {
 .fab-button {
   position: absolute;
   left: 50%;
-  bottom: 52px;
+  bottom: calc(52px + env(safe-area-inset-bottom));
   z-index: 11;
   width: var(--fab-size);
   height: var(--fab-size);
@@ -1638,22 +1642,49 @@ textarea {
   display: none !important;
 }
 
-@media (max-width: 430px) {
+@media (max-width: 560px), (max-height: 760px) {
+  :root {
+    --nav-height: 84px;
+    --fab-size: 62px;
+  }
+
   .app-shell {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
     padding: 0;
+    place-items: stretch;
   }
 
   .app-device {
     width: 100%;
+    max-width: none;
     height: 100vh;
     height: 100dvh;
-    min-height: 100vh;
+    min-height: 0;
     border: 0;
     border-radius: 0;
   }
 
   .app-content {
-    padding-inline: 14px;
+    padding:
+      max(18px, env(safe-area-inset-top))
+      14px
+      calc(var(--nav-height) + var(--fab-size) + 36px + env(safe-area-inset-bottom));
+  }
+
+  .bottom-nav {
+    left: 10px;
+    right: 10px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    height: var(--nav-height);
+    border-radius: 22px;
+  }
+
+  .fab-button {
+    bottom: calc(42px + env(safe-area-inset-bottom));
+    border-width: 5px;
   }
 
   .metric-card {
