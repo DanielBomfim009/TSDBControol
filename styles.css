@@ -41,7 +41,7 @@ body {
     radial-gradient(circle at bottom right, rgba(150, 91, 18, 0.16), transparent 32%),
     linear-gradient(180deg, #050402 0%, #100d06 48%, #030201 100%);
   color: var(--text);
-  font-family: "Manrope", "Segoe UI", sans-serif;
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
   letter-spacing: 0;
 }
 
@@ -361,7 +361,7 @@ textarea {
 
 .screen-title h1,
 .screen-title h2 {
-  font-family: "Cinzel", Georgia, serif;
+  font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(1.32rem, 6vw, 1.72rem);
   line-height: 1.12;
   font-weight: 700;
@@ -674,7 +674,7 @@ textarea {
 }
 
 .setup-card h1 {
-  font-family: "Cinzel", "Manrope", sans-serif;
+  font-family: Georgia, "Trebuchet MS", sans-serif;
   font-size: clamp(1.45rem, 7vw, 2rem);
   line-height: 1.05;
 }

@@ -2784,7 +2784,7 @@ function printLoanDocument(loanId, type) {
         <meta charset="utf-8" />
         <title>${title}</title>
         <style>
-          body { font-family: Manrope, Arial, sans-serif; margin: 36px; color: #211806; line-height: 1.55; }
+          body { font-family: "Trebuchet MS", Arial, sans-serif; margin: 36px; color: #211806; line-height: 1.55; }
           .doc { max-width: 760px; margin: 0 auto; border: 1px solid #d8b75c; border-radius: 18px; padding: 28px; }
           h1 { margin: 0 0 8px; }
           .muted { color: #806b3c; margin-bottom: 28px; }

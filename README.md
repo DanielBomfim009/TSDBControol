@@ -10,7 +10,7 @@ Aplicativo financeiro premium para controle pessoal de empréstimos, juros, atra
 - `manifest.webmanifest`: configuração de instalação do PWA.
 - `sw.js`: service worker para cache offline dos arquivos principais.
 - `icons/`: ícones do aplicativo.
-- `assets/`: logomarca própria da TSDB Empréstimos.
+- `assets/`: logomarca própria da TSDB Empréstimos e ícones locais para uso offline.
 
 ## Funcionalidades
 
@@ -37,6 +37,7 @@ Aplicativo financeiro premium para controle pessoal de empréstimos, juros, atra
 - Cobrança via WhatsApp com mensagens rápidas por contexto.
 - Geração de contrato e recibo para impressão/PDF.
 - Proteção local por PIN.
+- Funcionamento offline após o primeiro carregamento/instalação, sem fontes ou bibliotecas externas.
 
 ## Publicação no GitHub Pages
 
@@ -50,3 +51,7 @@ O projeto é estático e não precisa de build.
 ## Dados
 
 Os dados ficam no `localStorage` do navegador. Para trocar de aparelho ou navegador, use a exportação e importação de backup JSON dentro do app.
+
+## Uso offline
+
+O app não depende de servidor ou banco externo. Abra o TSDB uma vez com internet para o navegador instalar o PWA e gravar o cache local. Depois disso, ele abre offline e continua salvando os dados no próprio aparelho. Recursos externos, como abrir WhatsApp, continuam dependendo de internet.

@@ -1,0 +1,77 @@
+/* Offline icon fallback for TSDB. This replaces CDN icon fonts in the installed PWA. */
+.fa-solid,
+.fa-regular,
+.fa-brands {
+  display: inline-grid;
+  place-items: center;
+  width: 1em;
+  min-width: 1em;
+  height: 1em;
+  font-family: "Segoe UI Symbol", "Arial Unicode MS", "Segoe UI", sans-serif;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1;
+  text-rendering: geometricPrecision;
+}
+
+.fa-solid::before,
+.fa-regular::before,
+.fa-brands::before {
+  display: block;
+  line-height: 1;
+}
+
+.fa-arrow-left::before { content: "←"; }
+.fa-arrow-trend-down::before { content: "↘"; }
+.fa-arrow-trend-up::before { content: "↗"; }
+.fa-bars::before { content: "☰"; }
+.fa-bell::before { content: "●"; }
+.fa-bolt::before { content: "!"; }
+.fa-briefcase::before { content: "▣"; }
+.fa-calendar-days::before { content: "▦"; }
+.fa-chart-column::before { content: "▥"; }
+.fa-chart-line::before { content: "⌁"; }
+.fa-chevron-down::before { content: "⌄"; }
+.fa-chevron-right::before { content: "›"; }
+.fa-circle-check::before { content: "✓"; }
+.fa-circle-dollar-to-slot::before { content: "$"; }
+.fa-clock::before { content: "◷"; }
+.fa-coins::before { content: "$"; }
+.fa-comment-dots::before { content: "…"; }
+.fa-download::before { content: "⇩"; }
+.fa-ellipsis::before { content: "⋯"; }
+.fa-ellipsis-vertical::before { content: "⋮"; }
+.fa-file-csv::before { content: "CSV"; font-size: .52em; }
+.fa-file-invoice-dollar::before { content: "$"; }
+.fa-file-signature::before { content: "✎"; }
+.fa-filter-circle-xmark::before { content: "×"; }
+.fa-floppy-disk::before { content: "▣"; }
+.fa-gear::before { content: "⚙"; }
+.fa-hourglass-half::before { content: "⌛"; }
+.fa-house::before { content: "⌂"; }
+.fa-landmark::before { content: "▤"; }
+.fa-lock::before { content: "■"; }
+.fa-magnifying-glass::before { content: "⌕"; }
+.fa-medal::before { content: "★"; }
+.fa-minus::before { content: "−"; }
+.fa-money-bill-trend-up::before { content: "$"; }
+.fa-pen::before { content: "✎"; }
+.fa-pen-to-square::before { content: "✎"; }
+.fa-plus::before { content: "+"; }
+.fa-receipt::before { content: "▤"; }
+.fa-repeat::before { content: "↻"; }
+.fa-rotate-right::before { content: "↻"; }
+.fa-sack-dollar::before { content: "$"; }
+.fa-scale-balanced::before { content: "≖"; }
+.fa-shield-check::before { content: "✓"; }
+.fa-shield-halved::before { content: "◇"; }
+.fa-trash::before { content: "×"; }
+.fa-triangle-exclamation::before { content: "!"; }
+.fa-unlock-keyhole::before { content: "□"; }
+.fa-upload::before { content: "⇧"; }
+.fa-users::before { content: "◆"; }
+.fa-vault::before { content: "▣"; }
+.fa-wallet::before { content: "▰"; }
+.fa-wand-magic-sparkles::before { content: "✦"; }
+.fa-whatsapp::before { content: "☎"; }
+.fa-xmark::before { content: "×"; }

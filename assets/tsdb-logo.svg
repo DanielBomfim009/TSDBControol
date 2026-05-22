@@ -17,6 +17,6 @@
     <path d="M74 22l42 15v31c0 31-17 52-42 65-25-13-42-34-42-65V37z" fill="rgba(244,199,93,0.08)" stroke="url(#gold)" stroke-width="6" stroke-linejoin="round" />
     <path d="M78 44v9c12 2 19 9 19 20H83c0-4-4-7-10-7-5 0-9 3-9 6 0 5 4 6 15 9 15 5 22 11 22 24 0 12-9 20-23 23v10H66v-10c-15-3-24-12-24-25h15c0 7 6 11 15 11 7 0 12-3 12-7 0-5-5-7-16-10-15-4-22-11-22-23 0-11 8-19 20-22v-8z" fill="url(#gold)" />
   </g>
-  <text x="170" y="73" fill="url(#gold)" font-family="Cinzel, Georgia, serif" font-size="48" font-weight="700" letter-spacing="4">TSDB</text>
-  <text x="171" y="111" fill="#d8c087" font-family="Manrope, Arial, sans-serif" font-size="25" font-weight="700" letter-spacing="3">EMPRESTIMOS</text>
+  <text x="170" y="73" fill="url(#gold)" font-family="Georgia, serif" font-size="48" font-weight="700" letter-spacing="4">TSDB</text>
+  <text x="171" y="111" fill="#d8c087" font-family="Trebuchet MS, Arial, sans-serif" font-size="25" font-weight="700" letter-spacing="3">EMPRESTIMOS</text>
 </svg>
